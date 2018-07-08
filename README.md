@@ -9,7 +9,7 @@ An adventure game in Zelda style for the Commodore 64.
 
 - Python version 2.7.x (or Perl 5.18 and higher) is required for compressing the game map data.
 
-- Vice 64 is required for running the game. For automatic startup x64.exe needs to be set in your PATH environment variable.
+- The Vice C64 emulator is strongly recommended for running the game. For automatic startup x64.exe needs to be set in your PATH environment variable.
 
 ## Optional tools
 
