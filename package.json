@@ -1,0 +1,28 @@
+{
+  "name": "alone-and-dangerous",
+  "version": "0.0.1",
+  "description": "A c64 adventure game",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node aad-editor/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jimmypesola/alone-and-dangerous.git"
+  },
+  "author": "Jimmy Pesola",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jimmypesola/alone-and-dangerous/issues"
+  },
+  "homepage": "https://github.com/jimmypesola/alone-and-dangerous#readme",
+  "devDependencies": {
+    "connect": "^3.6.6",
+    "opn": "^5.3.0",
+    "serve-static": "^1.13.2"
+  }
+}
