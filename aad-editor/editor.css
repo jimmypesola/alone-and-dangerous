@@ -1,0 +1,223 @@
+body {
+  background-color: rgba(16, 16, 16, 255);
+  margin: 64px 0px 0px 64px;
+}
+
+#background {
+  /* text-align: center; */
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  margin: 0px 0px 0px 0px;
+  perspective: 600px;
+  perspective-origin: center 118px;
+}
+
+div#data {
+  border-radius: 25px;
+  border-style: outset;
+  border-color: rgba(96, 0, 0, 255);
+  border-width: 5px;
+  color: white;
+  position: relative;
+  padding: 10px 10px 10px 10px;
+  margin: 0px 0px 0px 0px;
+  width: 400px;
+  height: 480px;
+  opacity: 1.0;
+  background-color: rgba(64, 0, 0, 255);
+  display: inline;
+  float: left;
+}
+
+div#return_data {
+  border-radius: 25px;
+  border-style: outset;
+  border-color: rgba(0, 0, 96, 255);
+  border-width: 5px;
+  color: white;
+  position: relative;
+  padding: 10px 10px 10px 10px;
+  margin: 0px 0px 0px 0px;
+  width: 400px;
+  height: 480px;
+  opacity: 1.0;
+  background-color: rgba(0, 0, 64, 255);
+  display: inline;
+  float: left;
+}
+
+div#extension_data {
+  border-radius: 25px;
+  border-style: outset;
+  border-color: rgba(96, 96, 0, 255);
+  border-width: 5px;
+  color: white;
+  position: relative;
+  padding: 10px 10px 10px 10px;
+  margin: 0px 0px 0px 0px;
+  width: 400px;
+  height: 480px;
+  opacity: 1.0;
+  background-color: rgba(64, 64, 0, 255);
+  display: inline;
+  float: left;
+}
+
+div#session {
+  border-radius: 25px;
+  border-style: outset;
+  border-color: rgba(0, 96, 0, 255);
+  border-width: 5px;
+  color: white;
+  position: relative;
+  padding: 10px 10px 10px 10px;
+  margin: 0px 0px 0px 0px;
+  width: 400px;
+  height: 480px;
+  opacity: 1.0;
+  background-color: rgba(0, 64, 0, 255);
+  display: inline;
+  float: left;
+}
+
+div#output {
+  border-radius: 25px;
+  border-style: outset;
+  border-color: rgba(96, 0, 96, 255);
+  border-width: 5px;
+  color: white;
+  position: relative;
+  padding: 10px 10px 10px 10px;
+  margin: 0px 0px 0px 0px;
+  width: 1280px;
+  height: 1280px;
+  opacity: 1.0;
+  background-color: rgba(64, 0, 64, 255);
+  display: inline;
+  float: left;
+}
+
+ul.menu {
+  color: white;
+  height: auto;
+  padding: 10px 0px 10px 0px;
+  margin: 0px 0px 0px 0px;
+}
+
+li.menu {
+  display: inline;
+  padding: 20px 20px 20px 20px;
+}
+
+a.menu {
+  color: white;
+  font-size: 20px;
+  text-decoration: none;
+  text-transform: uppercase;
+  padding: 10px 10px 10px 10px;
+}
+
+a.menu:hover {
+  color: white;
+  font-size: 20px;
+  background-color: rgba(128, 0, 0, 255);
+}
+
+a.menu:visited {
+  color: white;
+}
+
+a.menu:active {
+  color: white;
+}
+
+a:link {
+  color: yellow;
+}
+
+a:visited {
+  color: orange;
+}
+
+a:hover {
+  color: red;
+}
+
+a:active {
+  color: peru;
+}
+
+h1 {
+  text-transform: uppercase;
+  font-family: "Open Sans", Arial, Verdana;
+  color: white;
+  text-shadow: 1px 1px 3px black;
+}
+
+h3 {
+  font-family: "Open Sans", Arial, Verdana;
+  color: white;
+  text-shadow: 1px 1px 3px black;
+}
+
+h2 {
+  text-transform: uppercase;
+  font-family: "Open Sans", Arial, Verdana;
+  color: white;
+  text-shadow: 1px 1px 3px black;
+}
+
+h2.underline {
+  text-transform: uppercase;
+  font-family: "Open Sans", Arial, Verdana;
+  color: white;
+  text-shadow: 1px 1px 3px black;
+  border-style: solid;
+  border-width: 0px 0px 2px 0px;
+}
+
+th, td, p, li {
+  font-family: "Open Sans", Arial, Verdana;
+  color: white;
+  text-shadow: 1px 1px 1px black;
+}
+
+p.small {
+  font-family: "Open Sans", Arial, Verdana;
+  font-size: 14px;
+  color: white;
+  text-shadow: 1px 1px 1px black;
+}
+
+table, td, th {
+  border: 1px solid white;
+}
+
+table.map {
+  border-collapse: collapse;
+  width: 1360px;
+  height: 6px;
+}
+
+th.map, td.map {
+  margin: 0px 0px 0px 0px;
+  width: 80px;
+  height: 48px;
+}
+
+table.room {
+  border-collapse: collapse;
+  width: 320px;
+  height: 200px;
+}
+
+th.room, td.room {
+  margin: 0px 0px 0px 0px;
+  width: 16px;
+  height: 16px;
+}
+
+select {
+  width: 250px;
+}

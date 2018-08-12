@@ -4596,6 +4596,8 @@ function setup() {
             bg_ctx.drawImage(Map.tiles, (tile*16)%256, Math.floor(tile/16)*16, 16, 16, mx*4, my*4, w, h);
         }
     }
+
+    addTitlesToTableCols()
 }
 
 // Color decoder for C64 multicolor values
@@ -4686,12 +4688,6 @@ function roomClicked(clicked_cell) {
 
         currentState = STATE.IDLE;
     }
-}
-
-function out(e) {
-}
-
-function over(e) {
 }
 
 function hasDoorCheckboxChanged(checkbox) {
@@ -5366,6 +5362,17 @@ function loadFromTextarea() {
 // -----------------------------------------------------------------------------
 // HELPERS
 // -----------------------------------------------------------------------------
+
+function addTitlesToTableCols() {
+
+    var tds = document.querySelectorAll("table#rooms td");
+
+    tds.forEach(function(td){
+        rowNum = Array.prototype.indexOf.call(td.parentNode.parentNode.children, td.parentNode)
+        colNum = Array.prototype.indexOf.call(td.parentNode.children, td)
+        td.setAttribute("title", "Row: " + rowNum + "\nColumn: " + colNum);
+    })
+}
 
 function clearData() {
     var addDoorButton = document.getElementById("add_door");
