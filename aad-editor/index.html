@@ -9,10 +9,10 @@
   <body onload="setup();">
     <div id="background">
       <h1>Primal Engine - Map / Door Editor v0.1</h1>
-      <div id="table" style="position: absolute; top: 0px; left: 0px;">
-        <canvas style="display: none; position: absolute; top:0px; left:0px; width:256px; height:64px;" id="tiles">Sorry, canvas bg not supported.</canvas>
-        <canvas style="position: absolute; top:64px; left:0px; width:1280px; height:640px;" id="bgcanvas">Sorry, canvas bg not supported.</canvas>
-        <table class="map" style="position: absolute; top:64px; left:0px; width:1280px; height:640px;" id="rooms">
+      <div id="table">
+        <canvas id="tiles">Sorry, canvas bg not supported.</canvas>
+        <canvas id="bgcanvas">Sorry, canvas bg not supported.</canvas>
+        <table class="map" id="rooms">
           <tr class="map">
             <td class="map"  onclick="roomClicked(this);">&nbsp;</td>
             <td class="map"  onclick="roomClicked(this);">&nbsp;</td>
@@ -250,7 +250,7 @@
         </table>
       </div>
 
-      <div style="position: absolute; top: 708px; left: 0px; width: 1920px; height: 400px; display: inline">
+      <div id="panels">
         <div id="data" style="display: none">
           <p id="room_id"></p>
           <p><input id="door_checkbox" type="checkbox" value="door" onchange="hasDoorCheckboxChanged(this);" />Door<br/><br/>
@@ -280,8 +280,8 @@
           <p>Exit posX:<input style="display: none" id="door_exit_x_pos_return" type="text" value="" onchange="exitPosChanged(this);" /><br/>
           Exit posY:<input style="display: none" id="door_exit_y_pos_return" type="text" value="" onchange="exitPosChanged(this);" /></p>
           <p>Select target position:
-            <canvas id="room_canvas" style="position: absolute; top: 160px; left: 8px; width: 320px; height: 208px;">Unable to display canvas</canvas>
-            <table class="room" id="room_table" style="position: absolute; top: 160px; left: 8px;">
+            <canvas id="room_canvas">Unable to display canvas</canvas>
+            <table class="room" id="room_table">
               <tr class="room">
                 <td class="room"  onclick="tileClicked(this);"></td>
                 <td class="room"  onclick="tileClicked(this);"></td>
@@ -551,8 +551,8 @@
         </div>
         <div id="extension_data" style="display: none;">
           <p>Select target position:
-            <canvas id="room_canvas2" style="position: absolute; top: 160px; left: 8px;">Unable to display canvas</canvas>
-            <table class="room" id="room_table2" style="position: absolute; top: 160px; left: 8px; width: 320px; height: 191px;">
+            <canvas id="room_canvas2">Unable to display canvas</canvas>
+            <table class="room" id="room_table2">
               <tr class="room">
                 <td class="room"  onclick="tileClicked(this);"></td>
                 <td class="room"  onclick="tileClicked(this);"></td>
