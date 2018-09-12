@@ -7,7 +7,8 @@ import sys
 import struct
 
 C_INFILE_NAME = "aad_map_big.bin"
-C_OUTFILE_NAME = "aad_map_big.rle"
+C_BINFILE_NAME = "aad_map_big.rle"
+C_PRGFILE_NAME = "aad_map_big.prg"
 MAP_WIDTH = 16
 MAP_HEIGHT = 12
 MAP_SIZE = MAP_WIDTH * MAP_HEIGHT
@@ -283,13 +284,13 @@ def reencode_dictionary(dictionary):
 
 
 # Write the dictionary and the compressed data
-def write_compressed_file(filename, dictionary_bytes, compressed_bytes):
-    outfile = open(filename, "wb")
+def write_compressed_files(binfilename, dictionary_bytes, compressed_bytes):
+    binaryfile = open(binfilename, "wb")
     output_data = bytearray(dictionary_bytes)
-    outfile.write(output_data)
+    binaryfile.write(output_data)
     output_data = bytearray(compressed_bytes)
-    outfile.write(output_data)
-    outfile.close()
+    binaryfile.write(output_data)
+    binaryfile.close()
 
 
 
@@ -348,7 +349,7 @@ def main():
     dictionary_bytes = reencode_dictionary(dictionary)
 
     # Finally write the file
-    write_compressed_file(C_OUTFILE_NAME, dictionary_bytes, optimized_and_compressed_array)
+    write_compressed_files(C_BINFILE_NAME, dictionary_bytes, optimized_and_compressed_array)
 
 
 

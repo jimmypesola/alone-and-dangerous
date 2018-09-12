@@ -1,11 +1,11 @@
-		!to "aad.prg", cbm
-
+		!sl "aad_symbols.a"
+		!to "aad_unpacked.prg", cbm
+		!source "coretables_labels.a"
+		!source "outdoortables_labels.a"
 ; Memory (VIC Bank at $4000, character set at $4800, sprite blocks at $5000-$6fff)
 
 ;	CODE #1:
-;	$0400-$07e7 -> -- Color buffer, 1000 bytes
-;
-;	$0810-$1eff -> -- Routines and tables
+;	$0810-$1fff -> -- Routines and tables
 ;
 ;	MUSIC:
 ; 	$2000-$2fff -> 4096 bytes --- SID player routine (during dev use it for code)
@@ -30,8 +30,10 @@
 ;
 ;	$e000-$efff -> 4096 bytes --- Compressed sprite data.
 ;	$f000-$f5ff -> 1536 bytes --- Tables and game data (prel.)
+;	$f600-$f9e7 -> -- Color buffer, 1000 bytes
+;	$fa00-$faf0 -> -- Tile Buffer
+;
 
-; TODO: Fix door tables! Right now making door exit coords...
 ; TODO: Fix choppable tree / crushable rock / unlockable door (can be mixed in?) / table
 ; TODO: If all enemies are killed in some room, spawn item / door.
 ; TODO: Make shops
@@ -149,7 +151,8 @@ CurrentMobSpeed = $26
 PlayerPullForceX = $27
 PlayerPullForceY = $28
 
-PlayerWeaponPower = $29
+PlayerWeaponPower = $29	; bits 0-2 - sword type 0-7 (can do up to 7pts damage)
+			; bits 3-7 - other obtained weapons bitmask
 
 indextable=$30	; sprite multiplexer indices: must have at least 16 entries, but reserve 32
 
@@ -174,6 +177,16 @@ safe_tmp4=$59
 
 MapID = $5a
 
+MapOverworld = 0
+MapDungeon1 = 1
+MapDungeon2 = 2
+MapDungeon3 = 3
+MapDungeon4 = 4
+MapDungeon5 = 5
+MapDungeon6 = 6
+MapDungeon7 = 7
+MapRatDungeon = 8
+
 PlayerPowerState = $5b
 
 ; Animation counter
@@ -185,10 +198,36 @@ RandomPos = $61
 ; Player animation state variable and values
 PlayerAnimState = $62 ; NOTE: used with above AnimCounter (index 2 in sprite anim table)
 
-Inventory = $80	; Room for some items, let's say 16 bytes.
+; Inventory item types
+InvSword = $01			; Sword (damage added by weapon power)
+InvAxe = $02			; Just an axe, to cut trees
+InvBow = $04			; Bow is required to shoot arrows
+InvArrows = $08			; Normal arrows (white)
+InvFireArrows = $10		; Fire arrows (red/yellow flashing)
+InvMagicalArrows = $18		; Magically powered arrows (blue/white flashing)
+InvNecklaceGolden = $20		; Yellow (Spellpower level 1)
+InvNecklaceJade = $40		; Green (Spellpower level 2)
+InvNecklacePower = $60		; Aquamarine (Spellpower level 5)
+InvManaPotion = $80		; Light blue potion (Consumed when casting a spell)
+InvLifePotion = $01		; Red potion (restores +5 hearts)
+InvShield = $02			; Shield, blocks stronger attacks
+InvMasterKey = $04		; Opens one big locked door
+InvTorch = $08			; Torch to illuminate dungeons
+InvGauntlet = $10		; Gauntlet allows heavy lifting
+InvRaft = $20			; Raft allows lake traversal in some spots
+InvArmor = $40			; Armor 1/2
+InvImprovedArmor = $80		; Improved armor 1/4
+InvMagicalArmor = $c0		; Magical armor 1/6
+
+Arrows = $82			; Number of arrows, 1 byte.
+
+WeaponList = $83
+WeaponListLen = $86
+SelWeapon = $87			; Selected weapon idx: 0=None, 1=Sword, 2=Axe, 4=Bow
+
+; Free bytes here!
 
 linebuffer=$90 ; 40 bytes, ends in $b7
-
 
 ; ----------------------
 ; Scroll state values
@@ -255,19 +294,11 @@ PlayerStateSwitchMap = 12
 ; ----------------------
 ; Enemy animation state values
 ; ----------------------
-EnemyStopFacingSouth = 0
-EnemyStopFacingWest = 1
-EnemyStopFacingNorth = 2
-EnemyStopFacingEast = 3
-EnemyRunSouth = 4
-EnemyRunWest = 5
-EnemyRunNorth = 6
-EnemyRunEast = 7
-EnemyAttackSouth = 8
-EnemyAttackWest = 9
-EnemyAttackNorth = 10
-EnemyAttackEast = 11
-EnemyDying = 12
+EnemyRunSouth = 0
+EnemyRunWest = 1
+EnemyRunNorth = 2
+EnemyRunEast = 3
+EnemyDyingAnim = 4
 
 ; ----------------------
 ; Enemy behavior
@@ -278,9 +309,10 @@ EnemyWaiting = 1
 EnemyMoving = 2
 EnemyAttacking = 3
 EnemyHit = 4
-EnemyDead = 5
-EnemyLoot = 6
-EnemyIsNpc = 7
+EnemyDying = 5
+EnemyDead = 6
+EnemyLoot = 7
+EnemyIsNpc = 8
 
 ; ----------------------
 ; Player "Power" state,
@@ -331,75 +363,75 @@ c_right		= 3
 ;------------------------------------------------------------------------------------
 
 ; PLAYER/ENEMY DATA TABLES
-player_max_hp 	=	$f000	;!byte $00,$06	; store as strings, for efficiency 
-player_hp 	=	$f002	;!byte $00,$06			; bcd string
-player_level 	=	$f004	;!byte $00,$01			; bcd string
-player_gold	=	$f006	;!byte $00,$00,$00,$00,$00	; bcd string
-enemy_hp	=	$f00b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15dc
-enemy_ap	=	$f013	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15e4
-enemy_gold	=	$f01b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15ec
-enemy_state	=	$f023	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15f4
-enemy_anim_state=	$f02b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15fc
-enemy_lootidx	=	$f033	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $1604
-enemy_nextpos_x	=	$f03b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $160c
-enemy_nextpos_y	=	$f043	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $1614
-enemy_timer	=	$f04b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $161c
-enemy_pull_force_x =	$f053	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $1624
-enemy_pull_force_y =	$f05b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $162c
-
-CurrentRoomIdx =	$f063	; 1-byte room index on map
-
-; 16-bit mob data currently on screen
-CurrentMobType = 	$f064	; list of up to 9 bytes
-MobSrc =		$f06c	; 2-byte address where mob data is fetched
-
+;player_max_hp 	=	$f000	;!byte $00,$06	; store as strings, for efficiency 
+;player_hp 	=	$f002	;!byte $00,$06			; bcd string
+;player_level 	=	$f004	;!byte $00,$01			; bcd string
+;player_gold	=	$f006	;!byte $00,$00,$00,$00,$00	; bcd string
+;enemy_hp	=	$f00b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15dc
+;enemy_ap	=	$f013	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15e4
+;enemy_gold	=	$f01b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15ec
+;enemy_state	=	$f023	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15f4
+;enemy_anim_state=	$f02b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $15fc
+;enemy_lootidx	=	$f033	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $1604
+;enemy_nextpos_x=	$f03b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $160c
+;enemy_nextpos_y=	$f043	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $1614
+;enemy_timer	=	$f04b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $161c
+;enemy_pull_force_x =	$f053	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $1624
+;enemy_pull_force_y =	$f05b	;!byte $00,$00,$00,$00,$00,$00,$00,$00 ; $162c
+;
+;CurrentRoomIdx =	$f063	; 1-byte room index on map
+;
+;; 16-bit mob data currently on screen
+;CurrentMobType = 	$f064	; list of up to 9 bytes
+;MobSrc =		$f06c	; 2-byte address where mob data is fetched
+;
 ;-----------------------------------------------------------
 ; tile-to-screen lookup tables
 ; contains the relative positions for tiles on screen
 ;-----------------------------------------------------------
-tilepos_lo 	=	$f100
-tilepos_hi_a	=	$f200
-tilepos_hi_b	=	$f300
-colormem_hi	=	$f400
+;tilepos_lo 	=	$f100
+;tilepos_hi_a	=	$f200
+;tilepos_hi_b	=	$f300
+;colormem_hi	=	$f400
 
 ;-----------------------------------------------------------
 ; Sprite tables (160 bytes)
 ;-----------------------------------------------------------
 ; y-coordinate table for virtual sprites
-ytable		=	$f500	; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-
+;ytable		=	$f500	; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;
 ; x-coordinate table for virtual sprites
-xtablelo	=	$f520	; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-
+;xtablelo	=	$f520	; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;
 ; x-coordinate table for virtual sprites (high byte)
-xtablehi	=	$f540	; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-
+;xtablehi	=	$f540	; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;
 ; color table for virtual sprites
-color		=	$f560	; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-
+;color		=	$f560	; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;
 ; frame index for virtual sprites
-frame		=	$f580	; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-				; !byte $00,$00,$00,$00,$00,$00,$00,$00
-
+;frame		=	$f580	; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;				; !byte $00,$00,$00,$00,$00,$00,$00,$00
+;
 ; tile buffer for temporarily storing current map room
-tilebuffer	=	$1f00
+;tilebuffer	=	$fa00
 
-; color memory buffer (cannot use $f600 - $f9ff, some important pointer in kernal is overwritten)
-colorbuffer	=	$0400
+; color memory buffer
+;colorbuffer	=	$f600
 
 ;------------------------------------------------------------------------------------
 
@@ -521,6 +553,13 @@ colorbuffer	=	$0400
 		sta ytable+.sprite
 }
 
+; get_selected_weapon
+; Destroys:	a
+; Params:	none
+; Returns:	a - selected weapon index
+!macro get_selected_weapon {
+		lda SelWeapon
+}
 
 ; MACROS END
 ; --------------------------------------------
@@ -529,13 +568,133 @@ colorbuffer	=	$0400
 
 ; RUN command
 
-		*=$0800
-begin_code_800
-		!byte $00,$0d,$08,$0a,$00,$9e
+		*=$0801
+begin_code_801
+		!byte $0d,$08,$0a,$00,$9e
 		!byte $20,$31,$32,$32,$38,$38
 
-
 		*=$0810
+
+; --------------------------------------------
+; dungeon / overworld names + file names
+; --------------------------------------------
+outdoorworld		!pet "od"
+outdoorworld_len
+outdoorsprites		!pet "ods"
+outdoorsprites_len
+outdoorcharset		!pet "odc"
+outdoorcharset_len
+dungeon_1		!pet "d1"
+dungeon_1_len
+dungeon_1_sprites	!pet "d1s"
+dungeon_1_sprites_len
+dungeon_1_charset	!pet "d1c"
+dungeon_1_charset_len
+dungeon_2		!pet "d2"
+dungeon_2_len
+dungeon_2_sprites	!pet "d2s"
+dungeon_2_sprites_len
+dungeon_2_charset	!pet "d2c"
+dungeon_2_charset_len
+dungeon_3		!pet "d3"
+dungeon_3_len
+dungeon_3_sprites	!pet "d3s"
+dungeon_3_sprites_len
+dungeon_3_charset	!pet "d3c"
+dungeon_3_charset_len
+dungeon_4		!pet "d4"
+dungeon_4_len
+dungeon_4_sprites	!pet "d4s"
+dungeon_4_sprites_len
+dungeon_4_charset	!pet "d4c"
+dungeon_4_charset_len
+dungeon_5		!pet "d5"
+dungeon_5_len
+dungeon_5_sprites	!pet "d5s"
+dungeon_5_sprites_len
+dungeon_5_charset	!pet "d5c"
+dungeon_5_charset_len
+dungeon_6		!pet "d6"
+dungeon_6_len
+dungeon_6_sprites	!pet "d6s"
+dungeon_6_sprites_len
+dungeon_6_charset	!pet "d6c"
+dungeon_6_charset_len
+dungeon_7		!pet "d7"
+dungeon_7_len
+dungeon_7_sprites	!pet "d7s"
+dungeon_7_sprites_len
+dungeon_7_charset	!pet "d7c"
+dungeon_7_charset_len
+ratdungeon		!pet "rd"
+ratdungeon_len
+ratdungeon_sprites	!pet "rds"
+ratdungeon_sprites_len
+ratdungeon_charset	!pet "rdc"
+ratdungeon_charset_len
+
+map_name_lb_idx		!byte <outdoorworld,<dungeon_1,<dungeon_2,<dungeon_3,<dungeon_4
+			!byte <dungeon_5,<dungeon_6,<dungeon_7,<ratdungeon
+
+map_name_hb_idx		!byte >outdoorworld,>dungeon_1,>dungeon_2,>dungeon_3,>dungeon_4
+			!byte >dungeon_5,>dungeon_6,>dungeon_7,>ratdungeon
+
+map_name_len_idx	!byte outdoorworld_len-outdoorworld
+			!byte dungeon_1_len-dungeon_1, dungeon_2_len-dungeon_2
+			!byte dungeon_3_len-dungeon_3, dungeon_4_len-dungeon_4
+			!byte dungeon_5_len-dungeon_5, dungeon_6_len-dungeon_6
+			!byte dungeon_7_len-dungeon_7, ratdungeon_len-ratdungeon
+
+map_file_end_lb		!byte $ec, $ec, $ec, $ec, $ec, $ec, $ec, $ec, $ec
+map_file_end_hb		!byte $6c, $6c, $6c, $6c, $6c, $6c, $6c, $6c, $6c
+
+sprite_name_lb_idx	!byte <outdoorsprites, <dungeon_1_sprites, <dungeon_2_sprites
+			!byte <dungeon_3_sprites, <dungeon_4_sprites, <dungeon_5_sprites
+			!byte <dungeon_6_sprites, <dungeon_7_sprites, <ratdungeon_sprites
+
+sprite_name_hb_idx	!byte >outdoorsprites, >dungeon_1_sprites, >dungeon_2_sprites
+			!byte >dungeon_3_sprites, >dungeon_4_sprites, >dungeon_5_sprites
+			!byte >dungeon_6_sprites, >dungeon_7_sprites, >ratdungeon_sprites
+
+sprite_name_len_idx	!byte outdoorsprites_len-outdoorsprites
+			!byte dungeon_1_sprites_len-dungeon_1_sprites, dungeon_2_sprites_len-dungeon_2_sprites
+			!byte dungeon_3_sprites_len-dungeon_1_sprites, dungeon_4_sprites_len-dungeon_2_sprites
+			!byte dungeon_5_sprites_len-dungeon_1_sprites, dungeon_6_sprites_len-dungeon_2_sprites
+			!byte dungeon_7_sprites_len-dungeon_1_sprites, ratdungeon_sprites_len-ratdungeon_sprites
+
+sprite_file_end_lb	!byte $85, $85, $85, $85, $85, $85, $85, $85, $85
+sprite_file_end_hb	!byte $59, $59, $59, $59, $59, $59, $59, $59, $59
+
+
+charset_name_lb_idx	!byte <outdoorcharset, <dungeon_1_charset, <dungeon_2_charset
+			!byte <dungeon_3_charset, <dungeon_4_charset, <dungeon_5_charset
+			!byte <dungeon_6_charset, <dungeon_7_charset, <ratdungeon_charset
+
+charset_name_hb_idx	!byte >outdoorcharset, >dungeon_1_charset, >dungeon_2_charset
+			!byte >dungeon_3_charset, >dungeon_4_charset, >dungeon_5_charset
+			!byte >dungeon_6_charset, >dungeon_7_charset, >ratdungeon_charset
+
+charset_name_len_idx	!byte outdoorcharset_len-outdoorcharset
+			!byte dungeon_1_charset_len-dungeon_1_charset, dungeon_2_charset_len-dungeon_2_charset
+			!byte dungeon_3_charset_len-dungeon_1_charset, dungeon_4_charset_len-dungeon_2_charset
+			!byte dungeon_5_charset_len-dungeon_1_charset, dungeon_6_charset_len-dungeon_2_charset
+			!byte dungeon_7_charset_len-dungeon_1_charset, ratdungeon_charset_len-ratdungeon_charset
+
+charset_file_end_lb	!byte $e1, $e1, $e1, $e1, $e1, $e1, $e1, $e1, $e1
+charset_file_end_hb	!byte $4c, $4c, $4c, $4c, $4c, $4c, $4c, $4c, $4c
+
+			;              D   U   N   G   E   O   N       X
+dungeon_name		!byte $c0,$c0,$c4,$d4,$ce,$c7,$c5,$cf,$ce,$c0,$c0,$c0,$c0
+			;          R   A   T       D   U   N   G   E   O   N
+rat_dungeon_name	!byte $c0,$d2,$c1,$d3,$c0,$c4,$d4,$ce,$c7,$c5,$cf,$ce,$c0
+			;              O   V   E   R   W   O   R   L   D
+overworld_name		!byte $c0,$c0,$cf,$d6,$c5,$d2,$d7,$cf,$d2,$cc,$c4,$c0,$c0
+
+dungeon_names_lo	!byte <overworld_name, <dungeon_name, <dungeon_name, <dungeon_name, <dungeon_name
+			!byte <dungeon_name, <dungeon_name, <dungeon_name, <rat_dungeon_name
+dungeon_names_hi	!byte >overworld_name, >dungeon_name, >dungeon_name, >dungeon_name, >dungeon_name
+			!byte >dungeon_name, >dungeon_name, >dungeon_name, >rat_dungeon_name
+
 ;-----------------------------------------------------------
 ; raster routine - main rendering loop
 ; parameters:
@@ -758,6 +917,12 @@ player_read_controls
 			sta PlayerAnimState
 			jmp +++	; Release all pressed keys
 +
+		and #1 ; Check for space key (see status screen)
+		beq +
+			jsr draw_inventory
+			jmp +++
+
++		lda ScanResult
 		and #2 ; Check for A key (left)
 		beq +
 			ldx #1
@@ -863,7 +1028,15 @@ player_read_controls
 			jmp +++
 
 +		lda ScanResult
-		and #32 ; Check for Return key (attack)
+		and #32	; Check for 'n' key (select next weapon)
+		beq +
+
+			; Select next weapon
+			jsr select_next_weapon
+			jmp +++
+
++		lda ScanResult
+		and #64 ; Check for Return key (attack)
 		beq +++
 			lda KeyStopper
 			and #$20
@@ -904,7 +1077,11 @@ player_read_controls
 
 +				; else
 					; At this point we can assume it is an attack
-					lda #10
+					+get_selected_weapon
+					cmp #$ff
+					bne +
+						jmp +++	; reset keys if no sword
++					lda #10
 					sta PlayerBusyTimer
 
 					lda #<sword_swing
@@ -924,19 +1101,6 @@ player_read_controls
 ++++
 
 		rts
-; --------------------------------------------
-; player_read_controls local vars
-; --------------------------------------------
-plr_r_ctrl_dir
-		!byte $00
-plr_r_ctrl_coll
-		!byte $00
-plr_r_last_tilepos
-		!byte $00
-plr_r_last_tileidx
-		!byte $00
-; --------------------------------------------
-
 
 
 ; --------------------------------------------
@@ -944,6 +1108,25 @@ plr_r_last_tileidx
 ; SHORT UTILITY ROUTINES
 ; --------------------------------------------
 ; --------------------------------------------
+
+; select_next_weapon
+; Parameters: 	none
+; Destroys:	a
+; Returns:	a - selected weapon index
+select_next_weapon
+		lda #0
+		cmp WeaponListLen
+		bne +
+			lda #$ff
+			rts
++		inc SelWeapon
+		lda SelWeapon
+		sec
+-			sbc WeaponListLen
+			bcs -
+		adc WeaponListLen
+		sta SelWeapon
+		rts
 
 ; get_tile_left_of_sprite (spriteX-1)/16
 ; Destroys:	x, y, a
@@ -1332,15 +1515,20 @@ calc_individual_forces	; $1229
 
 		rts
 
+
 ;-----------------------------------------------------------
 ; check_player_enemy_collision
+; parameters (addresses):
+; - xtablelo_a+1
+; - xtablehi_a+1
+; - ytable_a+1
 ; returns: a=1 if collision, 0 if no collision
 ;-----------------------------------------------------------
-check_player_enemy_collision	; $12c4
+check_player_enemy_collision
 
 		lda xtablelo+player
 		sec
-		sbc xtablelo+enemy,x	; a = player_x - enemy_x[x];
+		sbc xtablelo+enemy,x
 		tay
 		lda xtablehi+player
 		sbc xtablehi+enemy,x
@@ -1352,7 +1540,7 @@ check_player_enemy_collision	; $12c4
 			bne ++
 			cpy #$f3
 			bcs +++
-				jmp ++	; check next enemy
+				jmp ++	; exit a=0
 +++				; else
 				; collision in X, check also Y
 				jmp +++
@@ -1365,23 +1553,24 @@ check_player_enemy_collision	; $12c4
 			bne ++
 			cpy #$0c
 			bcc +++
-				jmp ++	; check next enemy
+				jmp ++	; exit a=0
 +++				; else
 				; collision in X, check also Y
 			; }
 		lda ytable+player
 		sec
-		sbc ytable+enemy,x		; a = player_y - enemy_y[x];
+		sbc ytable+enemy,x	; a = object_a - enemy_y[x];
 		bcs +
 		; difference is negative, how far?
 
 			; if (a >= -11) then {
 			cmp #$f3
 			bcs +++
-				jmp ++	; check next enemy
+				jmp ++	; exit a=0
 +++				; else
 				; collision in Y too, return with 1 or higher (depending on loot type)
-				lda frame+enemy+16,x     ; contains loot type (80 is heart, 81 is coins, 82 is key)
+				;lda frame+enemy+16,x     ; contains loot type (80 is heart, 81 is coins, 82 is key)
+				lda #1
 				rts
 			; }
 
@@ -1390,10 +1579,11 @@ check_player_enemy_collision	; $12c4
 			; if (a <= 12) then {
 			cmp #$0c
 			bcc +++
-				jmp ++	; check next enemy
+				jmp ++	; exit a=0
 +++				; else
 				; collision in Y too, return with success
-				lda frame+enemy+16,x     ; contains loot type (if applicable)
+				;lda frame+enemy+16,x     ; contains loot type (if applicable)
+				lda #1
 				rts
 			; }
 ++
@@ -1452,33 +1642,7 @@ check_weapon_enemy_collision	; $12c4
 				jmp ++	; exit with a=0
 +++				; else
 				; collision in Y too, return with success
-
-				lda enemy_state,x	; check if enemy is alredy being hurt or is dying
-				cmp #EnemyHit
-				beq ++			; and if so, don't hurt anymore, exit with a=0
-				cmp #EnemyDying
-				beq ++
-					lda #EnemyHit
-					sta enemy_state,x
-					lda #32
-					sta enemy_timer,x
-					lda enemy_hp,x
-					sec
-					sbc PlayerWeaponPower
-					sta enemy_hp,x
-					bcs +++
-						lda #0
-						sta enemy_hp,x
-						lda #EnemyDying		; Player has slain the enemy
-						sta enemy_state,x
-						sta enemy_anim_state,x
-						lda #24
-						sta enemy_timer,x
-+++
-				inx
-				txa
-				dex
-				rts
+				jmp check_enemy
 			; }
 
 +			; difference is positive, how far?
@@ -1489,37 +1653,41 @@ check_weapon_enemy_collision	; $12c4
 				jmp ++	; exit with a=0
 +++				; else
 				; collision in Y too, return with success
-
-				lda enemy_state,x	; check if enemy is alredy being hurt or is dying
-				cmp #EnemyHit
-				beq ++			; and if so, don't hurt anymore, exit with a=0
-				cmp #EnemyDying
-				beq ++
-					lda #EnemyHit
-					sta enemy_state,x
-					lda #32
-					sta enemy_timer,x
-					lda enemy_hp,x
-					sec
-					sbc PlayerWeaponPower
-					sta enemy_hp,x
-					bcs +++
-						lda #0
-						sta enemy_hp,x
-						lda #EnemyDying		; Player has slain the enemy
-						sta enemy_state,x
-						sta enemy_anim_state,x
-						lda #24
-						sta enemy_timer,x
-+++
-				inx
-				txa
-				dex
-				rts
+				jmp check_enemy
 			; }
 ++
 
 		lda #$00
+		rts
+check_enemy
+		lda enemy_state,x	; check if enemy is alredy being hurt or is dying
+		cmp #EnemyHit
+		beq +			; and if so, don't hurt anymore, exit with a=0
+		cmp #EnemyDying
+		beq +
+			lda #EnemyHit
+			sta enemy_state,x
+			lda #32
+			sta enemy_timer,x
+			lda enemy_hp,x
+			sec
+			sbc PlayerWeaponPower
+			sta enemy_hp,x
+			bcs ++
+				lda #0
+				sta enemy_hp,x
+				lda #EnemyDying			; Player has slain the enemy
+				sta enemy_state,x
+				lda #EnemyDyingAnim
+				sta enemy_anim_state,x
+				lda #24
+				sta enemy_timer,x
+++
+		inx
+		txa
+		dex
+		rts
++		lda #0
 		rts
 
 ;-----------------------------------------------------------
@@ -1818,141 +1986,112 @@ increase_gold
 ;-----------------------------------------------------------
 ; KERNAL RAM TABLES (will be generated in RAM behind kernal)
 ;-----------------------------------------------------------
-generate_tables
+;generate_tables
+;
+;		; create player stats data
+;		ldx #99
+;		lda #0
+;-		sta $f000,x
+;		dex
+;		bne -
+;
+;		; initialize max HP, and HP to 6, level to 1
+;		lda #6
+;		sta player_max_hp+1
+;		lda #6
+;		sta player_hp+1
+;		lda #1
+;		sta player_level+1
+;
+;		; generate tile positions low byte
+;		lda #0
+;		ldx #0
+;-				ldy #20
+;--				sta $f100,x
+;				clc
+;				adc #2
+;				inx
+;				dey
+;				bne --
+;			clc
+;			adc #40
+;			cpx #240
+;			bne -
+;
+;		; generate tile positions high byte for screen 0,1 and color ram
+;		lda #$40
+;		sta tmp
+;		lda #$44
+;		sta tmp2
+;		lda #$d8
+;		sta tmp3
+;		ldx #0
+;-			lda tmp
+;			sta $f200,x
+;			lda tmp2
+;			sta $f300,x
+;			lda tmp3
+;			sta $f400,x
+;			inx
+;			cpx #$44
+;			bne -
+;		inc tmp
+;		inc tmp2
+;		inc tmp3
+;		ldx #0
+;-			lda tmp
+;			sta $f244,x
+;			lda tmp2
+;			sta $f344,x
+;			lda tmp3
+;			sta $f444,x
+;			inx
+;			cpx #$44
+;			bne -
+;		inc tmp
+;		inc tmp2
+;		inc tmp3
+;		ldx #0
+;-			lda tmp
+;			sta $f288,x
+;			lda tmp2
+;			sta $f388,x
+;			lda tmp3
+;			sta $f488,x
+;			inx
+;			cpx #$40
+;			bne -
+;		inc tmp
+;		inc tmp2
+;		inc tmp3
+;		ldx #0
+;-			lda tmp
+;			sta $f2c8,x
+;			lda tmp2
+;			sta $f3c8,x
+;			lda tmp3
+;			sta $f4c8,x
+;			inx
+;			cpx #$28
+;			bne -
+;
+;		; initialize sprite data area (160 bytes), start address is ytable
+;		ldx #160
+;		lda #0
+;-		dex
+;		sta ytable,x
+;		bne -
+;		
+;		rts
 
-		; create player stats data
-		ldx #99
-		lda #0
--		sta $f000,x
-		dex
-		bne -
-
-		; initialize max HP, and HP to 6, level to 1
-		lda #6
-		sta player_max_hp+1
-		lda #6
-		sta player_hp+1
-		lda #1
-		sta player_level+1
-
-		; generate tile positions low byte
-		lda #0
-		ldx #0
--				ldy #20
---				sta $f100,x
-				clc
-				adc #2
-				inx
-				dey
-				bne --
-			clc
-			adc #40
-			cpx #240
-			bne -
-
-		; generate tile positions high byte for screen 0,1 and color ram
-		lda #$40
-		sta tmp
-		lda #$44
-		sta tmp2
-		lda #$d8
-		sta tmp3
-		ldx #0
--			lda tmp
-			sta $f200,x
-			lda tmp2
-			sta $f300,x
-			lda tmp3
-			sta $f400,x
-			inx
-			cpx #$44
-			bne -
-		inc tmp
-		inc tmp2
-		inc tmp3
-		ldx #0
--			lda tmp
-			sta $f244,x
-			lda tmp2
-			sta $f344,x
-			lda tmp3
-			sta $f444,x
-			inx
-			cpx #$44
-			bne -
-		inc tmp
-		inc tmp2
-		inc tmp3
-		ldx #0
--			lda tmp
-			sta $f288,x
-			lda tmp2
-			sta $f388,x
-			lda tmp3
-			sta $f488,x
-			inx
-			cpx #$40
-			bne -
-		inc tmp
-		inc tmp2
-		inc tmp3
-		ldx #0
--			lda tmp
-			sta $f2c8,x
-			lda tmp2
-			sta $f3c8,x
-			lda tmp3
-			sta $f4c8,x
-			inx
-			cpx #$28
-			bne -
-
-		; initialize sprite data area (160 bytes), start address is ytable
-		ldx #160
-		lda #0
--		dex
-		sta ytable,x
-		bne -
-		
-		rts
+; -----------------------------------------------
+; Mini table for indexing tile rows (20 per row)
+; -----------------------------------------------
+get_index_from_map_coords
+		!byte $00,$14,$28,$3c,$50,$64,$78,$8c
+		!byte $a0,$b4,$c8,$dc
 
 
-; --------------------------------------------
-; RANDOM DATA
-; --------------------------------------------
-
-random_table	!byte  41,  1,101,238,141, 77,142, 39
-		!byte 203,187,228,174,153,199,188,196
-		!byte 104, 35,122, 71, 94,124,246,148
-		!byte 197,102, 14, 95, 29,  6,100,250
-		!byte 177, 53,185,147,247,251, 17,214
-		!byte 233,173,183,252, 34,230, 33, 18
-		!byte  78,149,137, 51, 40,125,202, 80
-		!byte 239, 27, 30, 62,211,242,218,204
-		!byte 107,192,249,236, 97,231, 15,130
-		!byte 105,  3,209,159, 10,240,180, 26
-		!byte 220, 45,  8,155,208,166, 58, 68
-		!byte 215, 73,157, 52, 54, 38,143, 28
-		!byte 193,226,126,194,223,164,114,120
-		!byte 172,225,118,150,154,145,109,171
-		!byte  21, 89,184, 13,169,241,224,  7
-		!byte 210, 25,253,201,243,  5, 22,110
-		!byte   9,167,115,248,135,134, 57, 46
-		!byte 106,235,245, 43, 59,129, 67, 75
-		!byte 182,216, 99,175,190,191,162, 66
-		!byte 117, 50, 69, 37,151, 83,103,163
-		!byte  36, 20, 11,206,131,156,168, 65
-		!byte 133, 98,165,144, 55,  4,232, 84
-		!byte  24, 72, 85,222, 74,244, 60, 70
-		!byte 237, 91,229,127,132,221,179,161
-		!byte 158, 23, 44, 56,178, 49,139,138
-		!byte 112, 90, 32,234,123,170, 12, 81
-		!byte 108, 93,181,116, 82, 92,186,111
-		!byte 113,121,219, 79, 76,200, 88, 31
-		!byte 213, 47, 96, 61,136, 19,198, 16
-		!byte   2, 48, 63,119, 87,189,254,205
-		!byte  64, 86,128, 42,176,195,146,227
-		!byte 140,212,217,207,152,160,255,0
 
 ; --------------------------------------------
 ; LOOKUP TABLES END
@@ -2386,6 +2525,10 @@ transit_x	!byte $00
 
 ;-----------------------------------------------------------
 ; swap_screen
+;  - Hides visible screen and makes it back buffer
+;  - Shows back buffer and makes it the visible screen
+;  - screen_id=0 => screen @ $4400
+;  - screen_id=1 => screen @ $4000
 ; parameters:
 ; destroys registers: yes
 ;-----------------------------------------------------------
@@ -2510,215 +2653,513 @@ clear_status_bar
 	bne -
 	rts
 
+
 ;-----------------------------------------------------------
-
-
-
-get_index_from_map_coords
-		!byte $00,$14,$28,$3c,$50,$64,$78,$8c
-		!byte $a0,$b4,$c8,$dc
-
-; -------------------------------------------------
-
-		*=$1b00
-map_data_start
-; MAIN WORLD DOORS - Each cell here is a reference to another cell. TODO: Store on disk with world.
-;                    These tables can be loaded from disk (they will not change.)
-doortable	; e0-ef indicates offset in "doortablemulti". $f0-$fe are dungeons 1-15, $ff means no door
-		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $ff,$83,$83,$80,$ff,$87,$ff,$88,$ff,$89,$8a,$ff,$8b,$ff,$ff,$8f ; $00
-		!byte $ff,$85,$86,$ff,$81,$ff,$ff,$ff,$ff,$ff,$ff,$8d,$ff,$8e,$ff,$ff ; $10
-		!byte $ff,$84,$92,$82,$8c,$ff,$93,$96,$e0,$ff,$97,$ff,$99,$ff,$91,$9a ; $20
-		!byte $9b,$9f,$ff,$ff,$ff,$9d,$9c,$ff,$95,$ff,$ff,$98,$ff,$ff,$ff,$ff ; $30
-		!byte $ff,$9e,$c0,$ff,$ff,$ff,$a1,$a2,$ff,$a3,$ff,$a6,$a5,$a7,$aa,$a8 ; $40
-		!byte $a9,$ff,$a0,$ab,$ff,$ac,$ad,$b4,$ff,$e1,$e2,$ff,$ff,$ff,$ff,$b5 ; $50
-		!byte $b7,$ff,$b6,$b8,$ff,$ff,$ff,$b9,$ff,$ba,$ff,$ff,$bb,$bf,$ff,$ff ; $60
-		!byte $bc,$bd,$be,$ff,$ff,$ff,$a4,$c1,$c2,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $70
-		; --------------------------------------------------------------------------
-		!byte $03,$14,$23,$e3,$21,$11,$12,$05,$07,$09,$0a,$0c,$24,$1b,$1d,$0f ; $80
-		!byte $28,$2e,$22,$26,$28,$38,$27,$2a,$3b,$2c,$2f,$30,$36,$35,$41,$31 ; $90
-		!byte $52,$46,$47,$49,$76,$4c,$4b,$4d,$4f,$50,$4e,$53,$55,$56,$59,$59 ; $a0
-		!byte $59,$5a,$5a,$5a,$57,$5f,$62,$60,$63,$67,$69,$6c,$70,$71,$72,$6d ; $b0
-		!byte $42,$77,$78                                                     ; $c0
-
-doortablemulti
-		!byte $94,$90,$ff
-		!byte $ae,$af,$b0,$ff
-		!byte $b1,$b2,$b3,$ff
-		!byte $01,$02,$ff
-
-doorexits	; Exit tile position on *target* screen if door exists on that screen.
-		; Let's say, if doortable position x contains $81, then the exit tile
-		; coordinate found on screen position $81 is $bc.
-		; f0-ff indicates offset in "doorexitsmulti".
-		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$2b,$be,$2a,$00,$2b,$00,$be,$00,$be,$be,$00,$be,$00,$00,$2b ; $00
-		!byte $00,$3e,$33,$00,$be,$00,$00,$00,$00,$00,$00,$3e,$00,$33,$00,$00 ; $10
-		!byte $00,$2a,$be,$be,$be,$00,$be,$be,$f0,$00,$be,$00,$be,$00,$be,$be ; $20
-		!byte $be,$be,$00,$00,$00,$2a,$2a,$00,$be,$00,$00,$be,$00,$00,$00,$00 ; $30
-		!byte $00,$2a,$be,$00,$00,$00,$3e,$33,$00,$be,$00,$be,$2a,$2a,$be,$be ; $40
-		!byte $be,$00,$2a,$be,$00,$2a,$be,$be,$00,$f1,$f2,$00,$00,$00,$00,$be ; $50
-		!byte $be,$00,$be,$be,$00,$00,$00,$be,$00,$be,$00,$00,$be,$2a,$00,$00 ; $60
-		!byte $be,$be,$be,$00,$00,$00,$be,$3e,$33,$00,$00,$00,$00,$00,$00,$00 ; $70
-		; -------------------------------------------------------------------
-		!byte $36,$84,$a9,$f3,$6e,$39,$2a,$41,$92,$bf,$60,$6d,$80,$ae,$73,$3e ; $80
-		!byte $af,$8f,$be,$6c,$6d,$2f,$d0,$6e,$6d,$5d,$18,$a5,$6b,$2e,$b6,$aa ; $90
-		!byte $90,$c5,$b7,$d4,$6c,$7d,$59,$40,$83,$40,$94,$1d,$b9,$81,$2a,$b9 ; $a0
-		!byte $bd,$3e,$31,$b5,$69,$92,$84,$82,$52,$40,$70,$7f,$80,$5e,$37,$ad ; $b0
-		!byte $a8,$58,$1a                                                     ; $c0
-
-doorexitsmulti
-		!byte $2a,$be,$ff
-		!byte $be,$be,$be,$ff
-		!byte $3e,$33,$be,$ff
-		!byte $34,$5a,$ff
-
-; special entries
-;		$00-$3f = locked doors (if grass then must magically be revealed) (position)
-;		$40-$7f = chests (position, content)
-;		$80-$bf = destroyable blocks (not stones! they are all breakable.) (position, content)
-;		$c0-$fe = runestones (spells) (spell number)
-
-; notes:        - If $00-$3f but no door, then reveal a life container instead.
-special_entries
-		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$80,$81,$ff,$c0,$82,$ff,$83,$ff,$84,$85,$ff,$86,$ff,$ff,$c1
-		!byte $ff,$ff,$ff,$87,$c2,$ff,$ff,$ff,$ff,$88,$c3,$40,$ff,$89,$ff,$ff
-		!byte $ff,$01,$8a,$ff,$ff,$ff,$8b,$8c,$02,$ff,$03,$ff,$8d,$ff,$04,$8e
-		!byte $8f,$90,$91,$ff,$ff,$ff,$92,$ff,$05,$ff,$ff,$ff,$ff,$93,$ff,$ff
-		!byte $ff,$c4,$94,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$95,$06,$96,$97,$98
-		!byte $ff,$ff,$ff,$99,$41,$ff,$07,$9a,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $9b,$ff,$ff,$9c,$ff,$ff,$ff,$9d,$ff,$9e,$ff,$ff,$9f,$a0,$ff,$a1
-		!byte $ff,$ff,$a2,$ff,$08,$ff,$a3,$ff,$a4,$ff,$ff,$ff,$ff,$ff,$ff,$09
-		; -------------------------------------------------------------------
-		!byte $42,$43,$ff,$44,$45,$ff,$ff,$44,$45,$45,$45,$45,$46,$ff,$47,$c5
-		!byte $48,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff
-
-; screen tile positions for:
-locked_doors		; $00 - $3f
-		!byte $ff
-; screen tile positions and content for:
-chests			; $40 - $7f
-		!byte $ff
-; screen tile positions and content for:
-destroyable_blocks	; $80 - $bf
-		!byte $ff
-; content for:
-runestones		; $c0 - $fe
-		!byte $ff
-
-
-
-; -------------------------------------------------
-
-mobs_entries
-		;          Enemy types:
-                ;          0 - slime    (green - easy)
-                ;          1 - spider   (green - easy)
-                ;          2 - skeleton (green - easy)
-                ;          3 - knight   (green - easy)
-                ;          4 - slime    (blue - moderate)
-		;          5 - spider   (blue - moderate)
-		;          6 - skeleton (blue - moderate)
-		;          7 - knight   (blue - moderate)
-                ;          8 - slime    (purple - hard)
-		;          9 - spider   (purple - hard)
-		;          a - skeleton (purple - hard)
-		;          b - knight   (purple - hard)
-                ;          c - slime    (orange - extreme)
-		;          d - spider   (orange - extreme)
-		;          e - skeleton (orange - extreme)
-		;          f - knight   (orange - extreme)
-		;         10 - free
-		;         80 - NPC 0    (key giver for first "sword" chest)
-; $00
-grp_nothing
-		!byte $00		; empty room
-; $01
-grp_4x_blueknights
-		!byte $01,$07,$04	; # of groups; type (up to 256); qty in group x; type; qty in group x+1; ...
-; $02
-grp_4x_blueskellies
-		!byte $01,$06,$04
-; $03
-grp_4x_greenknights
-		!byte $01,$03,$04
-; $04
-grp_4x_bluespiders
-		!byte $01,$05,$04
-; $05
-grp_4x_greenskellies
-		!byte $01,$02,$04
-; $06
-grp_4x_greenspiders
-		!byte $01,$01,$04
-; $07
-grp_4x_greenslimes
-		!byte $01,$00,$04
-
-
-; $08
-grp_1x_greenskelly
-		!byte $01,$02,$01
-; $09
-grp_1x_greenslime
-		!byte $01,$00,$01
-; $0a
-grp_6x_greenslime
-		!byte $01,$00,$06
-; $0b
-grp_6x_greenspiders
-		!byte $01,$01,$06
-; $0c
-grp_2x_greenslime
-		!byte $01,$00,$02
-; $0d
-grp_1x_npc_0	!byte $01,$80,$01
-
-mobs_entries_list	; room for enemy configurations
-		!byte $00,$01,$04,$07,$0a,$0d,$10,$13,$16,$19,$1c,$1f,$22,$25,$28,$2b
-		!byte $2e,$31,$34,$37,$3a,$3d,$40,$43,$46,$49,$4c,$4f,$52,$55,$58,$5b
-		!byte $5e,$61,$64,$67,$6a,$6d,$70,$73,$76,$79,$7c,$7f,$82,$85,$88,$8b
-		!byte $8e,$91,$94,$97,$9a,$9d,$a0,$a3,$a6,$a9,$ac,$af,$b2,$b5,$b8,$bb
-		!byte $be,$c1,$c4,$c7,$ca,$cd,$d0,$d3,$d6,$d9,$dc,$df,$e2,$e5,$e8,$eb
+; loader
+;  disk load and unpack routine
+; preconditions:
+;    - kernal rom must be visible ($36 in address $01)
+; parameters: fname 	- byte sequence of 40 chars
+;           : fname_len - file name length
+;           : zp_dest_lo- decrunch destination address
+;           : zp_dest_hi- decrunch destination address
+; destroys registers: a, x, y
 ;-----------------------------------------------------------
-; level data constants (occupies $0440 bytes = 1092 bytes)
+;-------------------------------
+fname		= tmp_addr
+fname_len	!byte $00
+file_end	!word $0000
+;-------------------------------
+
+loader
+		jmp load_and_decrunch
+;-------------------------------
+; just return from interrupt asap
+loadirq
+		inc $d019
+		pla
+		tay
+		pla
+		tax
+		pla
+		rti
+flashload
+		inc $d020
+		dec $d020
+		jmp $f6ed
+;-------------------------------
+
+load
+		lda #$36      ; enable kernal
+		sta $01
+		lda #<flashload
+		sta $0328
+		lda #>flashload
+		sta $0329
+		lda fname_len
+		ldx fname
+		ldy fname+1
+		jsr $ffbd     ; call setnam
+
+		lda #$01      ; file number 1
+		ldx $ba       ; last used device number
+		bne +
+		ldx #$08      ; default to device 8
++		ldy #$01      ; load to address stored in file
+		jsr $ffba     ; call setlfs
+
+		lda #$00
+		jsr $ffd5     ; call LOAD
+		bcs load_error    ; if carry set, the file could not be opened
+
+		; check drive error channel here to test for
+		; file not found error etc.
+
+		rts
+;-------------------------------
+load_error
+		; A = $05 (DEVICE NOT PRESENT)
+		; A = $04 (FILE NOT FOUND)
+		; A = $1D (LOAD ERROR)
+		; A = $00 (BREAK, RUN/STOP has been pressed during loading)
+		jsr hex_error
+		lda #$02
+		sta $d020	; red color will indicate error
+		jmp *
+		rts
+;-------------------------------
+
+
+; -----------------
+; -- exodecrunch --
+; -----------------
+
+; -------------------------------------------------------------------
+; zero page addresses used
+; -------------------------------------------------------------------
+zp_len_lo = $a7
+zp_len_hi = $a8
+
+zp_src_lo  = $ae
+zp_src_hi  = zp_src_lo + 1
+
+zp_bits_hi = $fc
+
+zp_bitbuf  = $fd
+zp_dest_lo = zp_bitbuf + 1      ; dest addr lo
+zp_dest_hi = zp_bitbuf + 2      ; dest addr hi
+
+tabl_bi = decrunch_table
+tabl_lo = decrunch_table + 52
+tabl_hi = decrunch_table + 104
+		;                  L   O   A   D   I   N   G
+loading_text	!byte $c0,$c0,$c0,$cc,$cf,$c1,$c4,$c9,$ce,$c7,$c0,$c0,$c0
+		;              D   E   P   A   C   K   I   N   G
+decr_text	!byte $c0,$c0,$d5,$ce,$d0,$c1,$c3,$cb,$c9,$ce,$c7,$c0,$c0
+
+destination_lo	= *
+destination_hi  = * + 1
+		!word $0000
+
+;LITERAL_SEQUENCES_NOT_USED = 0
+
+; -------------------------------------------------------------------
+; disable interrupts, disable decimal mode, init disk loader
+load_and_decrunch
+		sei
+		lda #$7f
+		sta $dc0d
+		sta $dd0d
+		cld
+		lda #0
+		sta $d015	; disable sprites, they can hang loading...
+				; ...serial data reception from disk drive in desync?
+
+		; As we play with kernal, we need to short circuit the interrupt
+		lda #<loadirq
+		sta $0314
+		lda #>loadirq
+		sta $0315
+
+		lda #0
+		sta $d021
+
+		ldx #<loading_text
+		ldy #>loading_text
+		jsr caption_text
+
+		jsr swap_screen
+
+		jsr load
+
+		sei           ; stop all interrupts now
+		lda #$7f
+		sta $dc0d
+		sta $dd0d
+
+		lda #$35      ; disable kernal again
+		sta $01
+
+		; set main interrupt (sprite multiplexer)
+		lda #<maininter
+		sta $fffe
+		lda #>maininter
+		sta $ffff
+
+		; set start address for crunched data
+		lda file_end
+		sta _byte_lo
+		lda file_end+1
+		sta _byte_hi
+
+		ldx #<decr_text
+		ldy #>decr_text
+		jsr caption_text
+
+		jsr decrunch
+		rts
+; --------------------------------------
+; caption_text - prints loading status
+; a - text len
+; x - text low byte
+; y - text high byte
+; destination_lo, destination_hi - 
+;   Chosen dungeon from dungeon_names_lo
+;   and dungeon_names_hi.
+; --------------------------------------
+caption_text
+		stx capt_txt+1
+		sty capt_txt+2
+		lda destination_lo
+		sta dest_txt+1
+		lda destination_hi
+		sta dest_txt+2
+		ldy #0
+-			lda #0
+			sta $41c6,y
+			sta $423e,y
+capt_txt		lda $0000,y
+			sta $41ee,y
+dest_txt		lda $0000,y
+			cmp #$db
+			bne +
+			lda MapID
++			sta $4216,y
+			lda #1
+			sta $d9ee,y
+			sta $da16,y
+			iny
+			cpy #13
+			bne -
+		rts
+
+; --------------------------------------
+; hex output in corner
+; --------------------------------------
+hex_error
+		pha
+		and #$0f
+		tay
+		lda hextable,y
+		sta $4001
+		pla
+		and #$f0
+		tay
+		lda hextable,y
+		sta $4000
+		rts
+hextable
+		!byte $dc,$dd,$de,$df,$e0,$e1,$e2,$e3
+		!byte $e4,$e5,$c1,$c2,$c3,$c4,$c5,$c6
+; --------------------------------------
+; get crunched byte routine
+; --------------------------------------
+get_crunched_byte
+	lda _byte_lo
+	bne _byte_skip_hi
+	dec _byte_hi
+_byte_skip_hi
+	dec _byte_lo
+_byte_lo = * + 1
+_byte_hi = * + 2
+	lda $ffff		; needs to be set correctly before
+	inc $d020
+	dec $d020
+	rts			; decrunch_file is called.
+; end_of_data needs to point to the address just after the address
+; of the last byte of crunched data.
+; -------------------------------------------------------------------
+
+; exodecrunch starts here
+; --------------------------------------
+        ;; refill bits is always inlined
+!macro mac_refill_bits {
+        pha
+        jsr get_crunched_byte
+        rol
+        sta zp_bitbuf
+        pla
+}
+
+!macro mac_get_bits {
+        jsr get_bits
+}
+
+get_bits
+        adc #$80                ; needs c=0, affects v
+        asl
+        bpl gb_skip
+gb_next
+        asl zp_bitbuf
+        bne gb_ok
+        +mac_refill_bits
+gb_ok
+        rol
+        bmi gb_next
+gb_skip
+        bvs gb_get_hi
+        rts
+gb_get_hi
+        sec
+        sta zp_bits_hi
+        jmp get_crunched_byte
+; -------------------------------------------------------------------
+; no code below this comment has to be modified in order to generate
+; a working decruncher of this source file.
+; However, you may want to relocate the tables last in the file to a
+; more suitable address.
+; -------------------------------------------------------------------
+
+; -------------------------------------------------------------------
+; jsr this label to decrunch, it will in turn init the tables and
+; call the decruncher
+; no constraints on register content, however the
+; decimal flag has to be #0 (it almost always is, otherwise do a cld)
+decrunch
+; -------------------------------------------------------------------
+; init zeropage, x and y regs. (12 bytes)
+;
+        ldy #0
+        ldx #3
+init_zp
+        jsr get_crunched_byte
+        sta zp_bitbuf - 1,x
+        dex
+        bne init_zp
+; -------------------------------------------------------------------
+; calculate tables (62 bytes) + get_bits macro
+; x and y must be #0 when entering
+;
+        clc
+table_gen
+        tax
+        tya
+        and #$0f
+        sta tabl_lo,y
+        beq shortcut            ; start a new sequence
+; -------------------------------------------------------------------
+        txa
+        adc tabl_lo - 1,y
+        sta tabl_lo,y
+        lda zp_len_hi
+        adc tabl_hi - 1,y
+shortcut
+        sta tabl_hi,y
+; -------------------------------------------------------------------
+        lda #$01
+        sta <zp_len_hi
+        lda #$78                ; %01111000
+        +mac_get_bits
+; -------------------------------------------------------------------
+        lsr
+        tax
+        beq rolled
+        php
+rolle
+        asl zp_len_hi
+        sec
+        ror
+        dex
+        bne rolle
+        plp
+rolled
+        ror
+        sta tabl_bi,y
+        bmi no_fixup_lohi
+        lda zp_len_hi
+        stx zp_len_hi
+        !byte $24
+no_fixup_lohi
+        txa
+; -------------------------------------------------------------------
+        iny
+        cpy #52
+        bne table_gen
+; -------------------------------------------------------------------
+; prepare for main decruncher
+        ldy zp_dest_lo
+        stx zp_dest_lo
+        stx zp_bits_hi
+; -------------------------------------------------------------------
+; copy one literal byte to destination (11 bytes)
+;
+literal_start1
+        tya
+        bne no_hi_decr
+        dec zp_dest_hi
+no_hi_decr
+        dey
+        jsr get_crunched_byte
+        sta (zp_dest_lo),y
+; -------------------------------------------------------------------
+; fetch sequence length index (15 bytes)
+; x must be #0 when entering and contains the length index + 1
+; when exiting or 0 for literal byte
+next_round
+        dex
+        lda zp_bitbuf
+no_literal1
+        asl
+        bne nofetch8
+        jsr get_crunched_byte
+        rol
+nofetch8
+        inx
+        bcc no_literal1
+        sta zp_bitbuf
+; -------------------------------------------------------------------
+; check for literal byte (2 bytes)
+;
+        beq literal_start1
+; -------------------------------------------------------------------
+; check for decrunch done and literal sequences (4 bytes)
+;
+        cpx #$11
+        bcs exit_or_lit_seq
+; -------------------------------------------------------------------
+; calulate length of sequence (zp_len) (18(11) bytes) + get_bits macro
+;
+        lda tabl_bi - 1,x
+        +mac_get_bits
+        adc tabl_lo - 1,x       ; we have now calculated zp_len_lo
+        sta zp_len_lo
+        lda zp_bits_hi
+        adc tabl_hi - 1,x       ; c = 0 after this.
+        sta zp_len_hi
+; -------------------------------------------------------------------
+; here we decide what offset table to use (27(26) bytes) + get_bits_nc macro
+; z-flag reflects zp_len_hi here
+;
+        ldx zp_len_lo
+        lda #$e1
+        cpx #$03
+        bcs gbnc2_next
+        lda tabl_bit,x
+gbnc2_next
+        asl zp_bitbuf
+        bne gbnc2_ok
+        tax
+        jsr get_crunched_byte
+        rol
+        sta zp_bitbuf
+        txa
+gbnc2_ok
+        rol
+        bcs gbnc2_next
+        tax
+; -------------------------------------------------------------------
+; calulate absolute offset (zp_src) (21 bytes) + get_bits macro
+;
+        lda #0
+        sta zp_bits_hi
+        lda tabl_bi,x
+        +mac_get_bits
+        adc tabl_lo,x
+        sta zp_src_lo
+        lda zp_bits_hi
+        adc tabl_hi,x
+        adc zp_dest_hi
+        sta zp_src_hi
+; -------------------------------------------------------------------
+; prepare for copy loop (2 bytes)
+;
+pre_copy
+        ldx zp_len_lo
+; -------------------------------------------------------------------
+; main copy loop (30 bytes)
+;
+copy_next
+        tya
+        bne copy_skip_hi
+        dec zp_dest_hi
+        dec zp_src_hi
+copy_skip_hi
+        dey
+!ifndef LITERAL_SEQUENCES_NOT_USED {
+        bcs get_literal_byte
+}
+        lda (zp_src_lo),y
+literal_byte_gotten
+        sta (zp_dest_lo),y
+        dex
+        bne copy_next
+        lda zp_len_hi
+begin_stx
+        stx zp_bits_hi
+        beq next_round
+copy_next_hi
+        dec zp_len_hi
+        jmp copy_next
+!ifndef LITERAL_SEQUENCES_NOT_USED {
+get_literal_byte
+        jsr get_crunched_byte
+        bcs literal_byte_gotten
+}
+; -------------------------------------------------------------------
+; exit or literal sequence handling (16(12) bytes)
+;
+exit_or_lit_seq
+!ifndef LITERAL_SEQUENCES_NOT_USED {
+        beq decr_exit
+        jsr get_crunched_byte
+        sta zp_len_hi
+        jsr get_crunched_byte
+        tax
+        bcs copy_next
+decr_exit
+}
+        rts
+; -------------------------------------------------------------------
+; the static stable used for bits+offset for lengths 3, 1 and 2 (3 bytes)
+; bits 4, 2, 4 and offsets 16, 48, 32
+tabl_bit
+	!byte %11100001, %10001100, %11100010
+; -------------------------------------------------------------------
+; end of decruncher
+; -------------------------------------------------------------------
+
+; -------------------------------------------------------------------
+; this 156 byte table area may be relocated. It may also be clobbered
+; by other data between decrunches.
+; -------------------------------------------------------------------
+decrunch_table
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        !byte 0,0,0,0,0,0,0,0,0,0,0,0
+; -------------------------------------------------------------------
+; end of decruncher
+; -------------------------------------------------------------------
+
+
 ;-----------------------------------------------------------
-map_data_end
-		*=$1e00
-world
-		; mobs_entries references
-
-		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $01,$02,$02,$02,$03,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
-		!byte $04,$04,$05,$05,$05,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
-		!byte $04,$06,$06,$05,$05,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
-		!byte $04,$06,$06,$07,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
-		!byte $04,$04,$06,$07,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
-		!byte $0c,$07,$06,$07,$06,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
-		!byte $09,$0b,$00,$06,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $06
-		!byte $00,$0a,$08,$0a,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $07
-
-		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $08
-		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $09
-		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $0a
-		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0d,$00,$00,$00 ; $0b
-		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $0c
 end_code_800
-; -------------------------------------------------
-
-
-
-; -------------------------------------------------
-;
-;		TILE BUFFER AREA
-;		; $1f00 - $1fff
-;		; do not allocate anything here
-;
 ; -------------------------------------------------
 
 
@@ -2748,7 +3189,7 @@ begin_code_3k
 
 		lda #$35	; Turn off kernal and basic
 		sta $01
-		jsr generate_tables
+		;jsr generate_tables
 
 		ldx #$ff
 		txs		; reset stack pointer
@@ -2792,6 +3233,10 @@ begin_code_3k
 		sta xdif
 		lda #$f8	; init y difference to 9
 		sta ydif
+
+		; set initial map #
+		lda #0
+		sta MapID
 
 		; init multiplexing jump table (didn't find a way to do this in compile time with ACME.)
 		lda #<exitinter
@@ -2918,28 +3363,13 @@ player_dies
 			stx PlayerBusyTimer
 			rts
 +
+		ldx #8
 		lda #0
-		sta xtablelo+player
-		sta xtablehi+player
-		sta ytable+player
-		sta xtablelo+enemy
-		sta xtablehi+enemy
-		sta ytable+enemy
-		sta xtablelo+enemy+1
-		sta xtablehi+enemy+1
-		sta ytable+enemy+1
-		sta xtablelo+enemy+2
-		sta xtablehi+enemy+2
-		sta ytable+enemy+2
-		sta xtablelo+enemy+3
-		sta xtablehi+enemy+3
-		sta ytable+enemy+3
-		sta xtablelo+enemy+4
-		sta xtablehi+enemy+4
-		sta ytable+enemy+4
-		sta xtablelo+enemy+5
-		sta xtablehi+enemy+5
-		sta ytable+enemy+5
+-			dex
+			sta xtablelo,x
+			sta xtablehi,x
+			sta ytable,x
+			bne -
 		sta MobsPresent
 		lda #PlayerStateFades
 		sta PlayerState
@@ -3047,41 +3477,76 @@ player_fades
 			rts
 +
 		; write "game over" on screen
-		lda #$c7	; G
-		sta $41ef
-		lda #$c1	; A
-		sta $41f0
-		lda #$cd	; M
-		sta $41f1
-		lda #$c5	; E
-		sta $41f2
-		lda #$cf	; O
-		sta $41f4
-		lda #$d6	; V
-		sta $41f5
-		lda #$c5	; E
-		sta $41f6
-		lda #$d2	; R
-		sta $41f7
+		ldx #0
+-		lda text_game_over,x
+		sta $41ef,x
 		lda #1
-		sta $d9ef
-		sta $d9f0
-		sta $d9f1
-		sta $d9f2
-		sta $d9f4
-		sta $d9f5
-		sta $d9f6
-		sta $d9f7
+		sta $d9ef,x
+		inx
+		cpx #9
+		bne -
 		
 		rts
 
+text_game_over	!byte $c7,$c1,$cd,$c5,$c0,$cf,$d6,$c5,$d2
 player_fades_counter
 		!byte $00
 
 
 ;-----------------------------------------------------------
 ; ctrl_player - read keyboard + move player + check map collision
-; returns:
+; returns: a
+; 0 - player has moved to another screen by going close
+;     to a screen edge.
+; 1 - player is still on same screen.
+;-----------------------------------------------------------
+prepare_new_map
+		; Load the correct map and set things up
+		ldy MapID
+		lda map_name_lb_idx,y
+		sta fname
+		lda map_name_hb_idx,y
+		sta fname+1
+		lda map_name_len_idx,y
+		sta fname_len
+		lda map_file_end_lb,y
+		sta file_end
+		lda map_file_end_hb,y
+		sta file_end+1
+		lda dungeon_names_lo,y
+		sta destination_lo
+		lda dungeon_names_hi,y
+		sta destination_hi
+		jsr swap_screen
+		jsr loader
+		ldy MapID
+		lda sprite_name_lb_idx,y
+		sta fname
+		lda sprite_name_hb_idx,y
+		sta fname+1
+		lda sprite_name_len_idx,y
+		sta fname_len
+		lda sprite_file_end_lb,y
+		sta file_end
+		lda sprite_file_end_hb,y
+		sta file_end+1
+		jsr loader
+		lda charset_name_lb_idx,y
+		sta fname
+		lda charset_name_hb_idx,y
+		sta fname+1
+		lda charset_name_len_idx,y
+		sta fname_len
+		lda charset_file_end_lb,y
+		sta file_end
+		lda charset_file_end_hb,y
+		sta file_end+1
+		jsr loader
+
+		rts
+;-----------------------------------------------------------
+; ctrl_player - read keyboard + move player + check map collision
+; returns: a
 ; 0 - player has moved to another screen by going close
 ;     to a screen edge.
 ; 1 - player is still on same screen.
@@ -3210,8 +3675,16 @@ keep_transit
 
 +		cmp #PlayerStateSwitchMap
 		bne +
-			; TODO: Switch map
-			jmp ctrl_player_check_edges
+			jsr prepare_new_map
+			jsr setup
+
+			cli		; enable interrupts
+			asl $d019	; acknowledge interrupts
+			lda $dc0d
+
+			jmp *
+			;lda #1	; set a to 1 to not scroll screen
+			;rts
 
 +		; else	;cmp #PlayerStateFades
 
@@ -3219,7 +3692,7 @@ keep_transit
 
 			jsr read_keyboard
 			lda ScanResult
-			and #32
+			and #64
 			beq *+5
 				jsr setup
 				lda player_max_hp+1
@@ -3335,8 +3808,9 @@ ctrl_player_check_collisions
 			sta tmp3 ; target screen position
 			cmp #$f0
 			bcc +
-				; TODO: Load new map
+				; Load new map
 				and #$0f
+				sta MapID
 				ldx #PlayerStateSwitchMap
 				stx PlayerState
 				rts
@@ -3500,9 +3974,14 @@ setup
 		lda #11
 		sta $d023
 
-		; set map #
+		; reset sprite positions
 		lda #0
-		sta MapID
+		ldx #15
+-			sta xtablelo,x
+			sta xtablehi,x
+			sta ytable,x
+			dex
+			bpl -
 
 		; set screen offset on map [ x = map ID]
 		ldx MapID
@@ -3520,9 +3999,16 @@ setup
 		lda #>world
 		sta MobSrc+1
 
+		; Set player inventory data
+		lda #$00
+		sta SelWeapon
+		lda #1
+		sta WeaponListLen
+		lda #1
+		sta WeaponList
+
 		; position the sprites
 		; -- get sprite coords via world coordinates
-
 		lda StartLocX,x
 		+immediate_a_mod_n 20	; Clamp to 0-19 range
 		asl			; multiply by 16
@@ -4970,9 +5456,9 @@ buffer					sta tilebuffer
 			bne -
 
 			; reset pointer
-			lda #$1f
+			lda #>tilebuffer
 			sta buffer+2
-			lda #$00
+			lda #<tilebuffer
 			sta buffer+1
 
 			; uncompressed data now at tilebuffer
@@ -5457,8 +5943,17 @@ check_s
 		sta $dc00 
 		lda $dc01       ; load column information
 		and #%00100000  ; test 's' key 
-		bne check_return
+		bne check_n
 		lda #16
+		ora ScanResult
+		sta ScanResult
+check_n
+		lda #%11101111	; select row 5
+		sta $dc00
+		lda $dc01	; load column information
+		and #%10000000	; test 'n' key
+		bne check_return
+		lda #32
 		ora ScanResult
 		sta ScanResult
 check_return
@@ -5467,7 +5962,7 @@ check_return
 		lda $dc01	; test 'return' key
 		and #%00000010
 		bne skip
-		lda #32
+		lda #64
 		ora ScanResult
 		sta ScanResult
 skip
@@ -5614,7 +6109,7 @@ end_code_3k
 		*=$7000
 mapdata
 		!binary "aad_map_big.rle"
-
+end_mapdata
 		; Map color data 256 bytes
 colordata
 		!binary "aad_charset_attrs_big.bin"
@@ -5639,46 +6134,132 @@ chardata
 		; Sprites from $5000-$6fff ; 128*64 bytes sprites
 		*=$5000
 spritedata
-		!binary "sprites.bin"	; 128 unpacked sprite entries, will add up to 128 packed sprite entries (32 bytes * 128 = 4096 = 4k) at $e000-$efff
+		!binary "sprites_2.bin"	; 128 unpacked sprite entries, will add up to 128 packed sprite entries (32 bytes * 128 = 4096 = 4k) at $e000-$efff
 
 		; Ends at $6fff
 
 		*=$c000
 begin_code_c000
+
 ;-----------------------------------------------------------
-; Music player interrupt
+; Inventory interrupt
 ;
 ;-----------------------------------------------------------
-music_sprites_interrupt
+inventory_interrupt
 		sta areg
 		stx xreg
 		sty yreg
 
-		sei
-
 		jsr $2003
-
-		lda #$1b	; Default settings, normal text mode, set raster high bit to 0
-
-		sta $d011
-		lda #<maininter	; so, set raster interrupt at next sprite 0 y coordinate.
-		sta $fffe
-		lda #>maininter
-		sta $ffff
-
-		lda #$00	; Set main interrupt to happen at line 32
-		sta $d012
-
-		inc $d019	; acknowledge raster irq.
-		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
 
 		lda areg
 		ldx xreg
 		ldy yreg
 
-		cli
+		lda #120
+		sta $d012
+
+		lda #<inventory_interrupt0
+		sta $fffe
+		lda #>inventory_interrupt0
+		sta $ffff
+
+		; Turn off sprites but initialize their positions
+		lda #0
+		sta $d015
+		lda #104
+		sta $d001
+		sta $d003
+		sta $d005
+		sta $d007
+		sta $d009
+		sta $d00b
+		sta $d00d
+		sta $d00f
+
+		; Set color and image on upper half of inventory sprites 
+		ldx #0
+-			lda inv_item_color0,x
+			sta $d02b,x
+			lda inv_item_color1,x
+			sta $d027,x
+			lda inv_sprites0,x
+			sta $43fc,x
+			lda inv_sprites1,x
+			sta $43f8,x
+			inx
+			cpx #4
+			bne -
+
+		lda items_mask
+		sta $d015
+
+		inc $d019	; acknowledge raster irq.
+		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
 
 		rti
+
+inventory_interrupt0
+
+		lda #52
+		sta $d012
+
+		lda #<inventory_interrupt
+		sta $fffe
+		lda #>inventory_interrupt
+		sta $ffff
+
+		; Turn off sprites but initialize their positions
+		lda #0
+		sta $d015
+		lda #128
+		sta $d001
+		sta $d003
+		sta $d005
+		sta $d007
+		sta $d009
+		sta $d00b
+		sta $d00d
+		sta $d00f
+
+		; Set color and image on upper half of inventory sprites 
+		ldx #0
+-			lda inv_item_color0+4,x
+			sta $d02b,x
+			lda inv_item_color1+4,x
+			sta $d027,x
+			lda inv_sprites0+4,x
+			sta $43fc,x
+			lda inv_sprites1+4,x
+			sta $43f8,x
+			inx
+			cpx #4
+			bne -
+
+		lda items_mask+1
+		sta $d015
+
+		inc $d019	; acknowledge raster irq.
+		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
+
+		rti
+
+inventory_interrupt1
+		rti
+
+inventory_interrupt2
+		rti
+
+inv_sprite_pos	!byte $80,$a0,$c0,$e0
+inv_items	!byte $18,$60,$01,$04,$08,$10,$20,$c0
+inv_masks	!byte $11,$22,$44,$88
+inv_item_color0	!byte $09,$07,$07,$01,$02,$02,$08,$05
+inv_item_color1	!byte $0e,$09,$0c,$09,$07,$09,$0b,$0b
+arrow_color	!byte $01,$08,$03
+necklace_color	!byte $07,$05,$03
+armor_color	!byte $0c,$07,$02
+inv_sprites0	!byte f_bow,f_necklace,f_shield,f_masterkey,f_torch,f_gauntlet,f_raft,f_armor
+inv_sprites1	!byte f_bow+4,f_necklace+4,f_shield+4,f_masterkey+4,f_torch+4,f_gauntlet+4,f_raft+4,f_armor+4
 
 ;-----------------------------------------------------------
 ; Sprite multiplexer interrupt
@@ -5730,7 +6311,7 @@ maininter
 morethan4	lda #$ff		; just enable all sprites directly, we use all in multiplexing
 		sta $d015
 		lda #$04		; store 4 in counter => vsprites 0-3 are already allocated to sprites 0-3,
-		sta vspr_counter	; multiplexing is done for sprites 4-16
+		sta vspr_counter	; multiplexing is done for sprites 4-8
 
 		lda #$2c		;bit $0000 ; self-modifying code, sets the bit opcode at "switch label", kind of a nop
 		sta switch
@@ -6287,15 +6868,15 @@ exitinter
 				jmp ++
 +			cmp #$01
 			bne +				; if (CurrentMobType == spider(1))
-				lda EnemyAnimTable+52,y
+				lda EnemyAnimTable+20,y
 				jmp ++
 +			cmp #$02
 			bne +				; if (CurrentMobType == skeleton(2))
-				lda EnemyAnimTable+104,y
+				lda EnemyAnimTable+40,y
 				jmp ++
 +
 							; else (CurrentMobType == knight(3))
-				lda EnemyAnimTable+156,y
+				lda EnemyAnimTable+60,y
 
 ++		sta frame+enemy+16,x
 		clc
@@ -6589,7 +7170,7 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 			sta enemy_pull_force_x,x
 			sta enemy_pull_force_y,x
 
-			lda #EnemyStopFacingSouth	; set animation state
+			lda #EnemyRunSouth	; set animation state
 			sta enemy_anim_state,x
 			lda #EnemyIdle			; set AI state
 			sta enemy_state,x
@@ -6612,15 +7193,15 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 				jmp ++
 +			cmp #1
 			bne +	; 1 = spider
-				lda EnemyAnimTable+48
+				lda EnemyAnimTable+20
 				jmp ++
 +			cmp #2
 			bne +	; 2 = skeleton
-				lda EnemyAnimTable+96
+				lda EnemyAnimTable+40
 				jmp ++
 
 +			; else	; 3 = knight
-				lda EnemyAnimTable+144
+				lda EnemyAnimTable+60
 ++
 			sta frame+enemy+16,x
 			clc
@@ -6805,6 +7386,7 @@ ctrl_enemy
 		; ---------------------------------
 		; Check enemy with player collision
 		; ---------------------------------
+
 		jsr check_player_enemy_collision
 		cmp #0
 		beq +
@@ -6974,7 +7556,8 @@ enemy_timeout_jmp
 			; ----------------
 			; Dying State
 			; ----------------
-			sta enemy_anim_state,x
+			;lda #EnemyDyingAnim
+			;sta enemy_anim_state,x
 			lda enemy_timer,x
 			beq +++
 				dec enemy_timer,x
@@ -7006,6 +7589,7 @@ enemy_timeout_jmp
 
 				lda #EnemyLoot
 				sta enemy_state,x
+				lda #EnemyRunSouth
 				sta enemy_anim_state,x
 				jmp +++++
 +++
@@ -7345,340 +7929,231 @@ player_start_attack
 
 		lda PlayerAnimState
 		and #3
+		tax
 		clc
 		adc #8		; This is the attack state, now determine which direction
 		sta PlayerAnimState
-		cmp #PlayerAttackSouth
-		bne +
 
 		; Show weapon sprite
-		lda xtablelo+player
-		sta xtablelo+weapon
 		lda xtablehi+player
 		sta xtablehi+weapon
-		lda ytable+player
-		clc
-		adc #16
+		lda xtablelo+player
+		sta xtablelo+weapon
+		cpx #1
+		bne +
+			sec
+			sbc #16
+			sta xtablelo+weapon
+			bcs ++
+				dec xtablehi+weapon
+				jmp ++
++		cpx #3
+		bne ++
+			clc
+			adc #16
+			sta xtablelo+weapon
+			bcc ++
+				inc xtablehi+weapon
+++		lda ytable+player
 		sta ytable+weapon
+		cpx #0
+		bne +
+			clc
+			adc #16
+			sta ytable+weapon
+			jmp ++
++		cpx #2
+		bne ++
+			sec
+			sbc #16
+			sta ytable+weapon
+++
 		lda #0
 		sta color+weapon
 		lda #8
 		sta color+weapon+16
-		lda #$6b
+		lda #$63
 		sta frame+weapon
-		lda #$70
+		lda player_weapon_frames,x
 		sta frame+weapon+16
 		rts
-+		cmp #PlayerAttackWest
-		bne +
 
-		; Show weapon sprite
-		lda xtablelo+player
-		sec
-		sbc #16
-		sta xtablelo+weapon
-		lda xtablehi+player
-		sbc #0
-		sta xtablehi+weapon
-		lda ytable+player
-		sta ytable+weapon
-		lda #0
-		sta color+weapon
-		lda #8
-		sta color+weapon+16
-		lda #$6b
-		sta frame+weapon
-		lda #$71
-		sta frame+weapon+16
-		rts
-+		cmp #PlayerAttackNorth
-		bne +
+;-----------------------------------------------------------
+; draw_inventory
+;-----------------------------------------------------------
+draw_inventory
+		sei
 
-		; Show weapon sprite
-		lda xtablelo+player
-		sta xtablelo+weapon
-		lda xtablehi+player
-		sta xtablehi+weapon
-		lda ytable+player
-		sec
-		sbc #16
-		sta ytable+weapon
-		lda #0
-		sta color+weapon
-		lda #8
-		sta color+weapon+16
-		lda #$6b
-		sta frame+weapon
-		lda #$72
-		sta frame+weapon+16
-		rts
-+		cmp #PlayerAttackEast
-		bne +
+		lda #<inventory_interrupt
+		sta $fffe
+		lda #>inventory_interrupt
+		sta $ffff
 
-		; Show weapon sprite
-		lda xtablelo+player
-		clc
-		adc #16
-		sta xtablelo+weapon
-		lda xtablehi+player
-		adc #0
-		sta xtablehi+weapon
-		lda ytable+player
-		sta ytable+weapon
-		lda #0
-		sta color+weapon
-		lda #8
-		sta color+weapon+16
-		lda #$6b
-		sta frame+weapon
-		lda #$73
-		sta frame+weapon+16
-		rts
+		lda screen_id
+		beq +
+			jsr swap_screen
 +
+		ldx #0
+		lda #0
+-			sta $4000,x
+			sta $4400,x
+			sta $4100,x
+			sta $4500,x
+			sta $4200,x
+			sta $4600,x
+			sta $42e7,x
+			sta $47e7,x
+			dex
+			bne -
+
+		; Text "Inventory"
+		ldx #0
+-			lda text_inv,x
+			sta $4038,x
+			lda #1
+			sta $d838,x
+			inx
+			cpx #9
+		bne -
+
+		; Text "Items"
+		ldx #0
+-			lda text_items,x
+			sta $40b1,x
+			lda #1
+			sta $d8b1,x
+			inx
+			cpx #7
+		bne -
+
+		; Text "Weapons"
+		ldx #0
+-			lda text_weapons,x
+			sta $4240,x
+			lda #1
+			sta $da40,x
+			inx
+			cpx #9
+		bne -
+
+		lda #6
+		sta $d021
+
+		lda #52
+		sta $d012
+
+		; Set arrow looks
+		;lda player_inv
+		;and #InvMagicalArrows
+		;asl
+		;asl
+		;asl
+		;tax
+		;lda arrow_color,x
+		;sta inv_item_color0
+		;sta inv_item_color1
+
+		; Set necklace looks
+		;lda player_inv
+		;and #InvNecklacePower
+		;asl
+		;asl
+		;asl
+		;asl
+		;asl
+		;tax
+		;lda necklace_color,x
+		;sta inv_item_color0+1
+
+		; Set armor looks
+		;lda player_inv+1
+		;and #InvMagicalArmor
+		;asl
+		;asl
+		;asl
+		;asl
+		;asl
+		;tax
+		;lda armor_color,x
+		;sta inv_item_color0+7
+
+		; Turn off sprites and initialize their positions
+		lda #0
+		sta $d015
+		ldx #0
+		ldy #0
+-			lda inv_sprite_pos,y
+			sta $d000,x
+			sta $d008,x
+			inx
+			inx
+			iny
+			cpy #4
+			bne -
+
+		;TODO: Testing
+		lda #$ff
+		sta player_inv
+		lda #$ff
+		sta player_inv+1
+
+
+		; Check what items player has found (upper and lower inventory rows)
+		ldx #0
+		stx items_mask
+		stx items_mask+1
+-			lda player_inv
+			bne +
+				jmp ++
++			and inv_items,x
+			beq +
+				lda items_mask
+				ora inv_masks,x
+				sta items_mask
++			lda player_inv
+			bne +
+				jmp ++
++			and inv_items+4,x
+			beq +
+				lda items_mask+1
+				ora inv_masks,x
+				sta items_mask+1
++			inx
+			cpx #4
+			bne -
+++
+		inc $d019	; acknowledge raster irq.
+		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
+
+		cli
+
+		jmp *
 		rts
 
+		;     I   N   V   E   N   T   O   R   Y
+text_inv	!byte $c9,$ce,$d6,$c5,$ce,$d4,$cf,$d2,$d9
+		;         I   T   E   M   S
+text_items	!byte $c0,$c9,$d4,$c5,$cd,$d3,$c0
+		;         W   E   A   P   O   N   S
+text_weapons	!byte $c0,$d7,$c5,$c1,$d0,$cf,$ce,$d3,$c0
+		;     -   S   P   A   C   E   -
+text_space	!byte $e6,$d3,$d0,$c1,$c3,$c5,$e6
 
-; Player's start location position arrays.
-StartLocX	!byte 8,0,0,0
-StartLocY	!byte 91,0,0,0
+fire_color	!byte $02,$0a,$07,$01,$01,$07,$0a,$02
+magical_color	!byte $01,$15,$14,$06,$06,$14,$15,$01
+item_color_idx	!byte $00
 
-MapStartX	!byte 0,0,0,0
-MapStartHiX	!byte 0,0,0,0
-MapStartY	!byte 84,0,0,0
-
-; --------------------------------
-; Sprite pointers data
-; --------------------------------
-AnimTable
-		; Standing facing south
-		!byte $40,$40,$40,$40
-		; Standing facing west
-		!byte $48,$48,$48,$48
-		; Standing facing north
-		!byte $50,$50,$50,$50
-		; Standing facing east
-		!byte $58,$58,$58,$58
-		; Walk south
-		!byte $40,$41,$40,$42
-		; Walk west
-		!byte $48,$49,$48,$4a
-		; Walk north
-		!byte $50,$51,$50,$52
-		; Walk east
-		!byte $58,$59,$58,$5a
-		; Attack south
-		!byte $43,$43,$43,$43
-		; Attack west
-		!byte $4b,$4b,$4b,$4b
-		; Attack north
-		!byte $53,$53,$53,$53
-		; Attack east
-		!byte $5b,$5b,$5b,$5b
-		; Dying
-		!byte $40,$48,$50,$58
-		; Death
-		!byte $78,$79,$7a,$7b
-EnemyAnimTable
-		; SLIME
-		; Standing facing south
-		!byte $62,$62,$62,$62
-		; Standing facing west
-		!byte $62,$62,$62,$62
-		; Standing facing north
-		!byte $62,$62,$62,$62
-		; Standing facing east
-		!byte $62,$62,$62,$62
-		; Run south
-		!byte $62,$63,$62,$63
-		; Run west
-		!byte $62,$63,$62,$63
-		; Run north
-		!byte $62,$63,$62,$63
-		; Run east
-		!byte $62,$63,$62,$63
-		; Attack south
-		!byte $62,$63,$62,$63
-		; Attack west
-		!byte $62,$63,$62,$63
-		; Attack north
-		!byte $62,$63,$62,$63
-		; Attack east
-		!byte $62,$63,$62,$63
-		; Death
-		!byte $78,$79,$7a,$7b
-
-		; SPIDER
-		; Standing facing south
-		!byte $90,$90,$90,$90
-		; Standing facing west
-		!byte $92,$92,$92,$92
-		; Standing facing north
-		!byte $98,$98,$98,$98
-		; Standing facing east
-		!byte $9a,$9a,$9a,$9a
-		; Run south
-		!byte $90,$91,$90,$91
-		; Run west
-		!byte $92,$93,$92,$93
-		; Run north
-		!byte $98,$99,$98,$99
-		; Run east
-		!byte $9a,$9b,$9a,$9b
-		; Attack south
-		!byte $90,$91,$90,$91
-		; Attack west
-		!byte $92,$93,$92,$93
-		; Attack north
-		!byte $98,$99,$98,$99
-		; Attack east
-		!byte $9a,$9b,$9a,$9b
-		; Death
-		!byte $78,$79,$7a,$7b
-
-		; SKELETON
-		; Standing facing south
-		!byte $a0,$a1,$a0,$a2
-		; Standing facing west
-		!byte $a0,$a1,$a0,$a2
-		; Standing facing north
-		!byte $a0,$a1,$a0,$a2
-		; Standing facing east
-		!byte $a0,$a1,$a0,$a2
-		; Run south
-		!byte $a0,$a1,$a0,$a2
-		; Run west
-		!byte $a0,$a1,$a0,$a2
-		; Run north
-		!byte $a0,$a1,$a0,$a2
-		; Run east
-		!byte $a0,$a1,$a0,$a2
-		; Attack south
-		!byte $a3,$a3,$a3,$a0
-		; Attack west
-		!byte $a3,$a3,$a3,$a0
-		; Attack north
-		!byte $a3,$a3,$a3,$a0
-		; Attack east
-		!byte $a3,$a3,$a3,$a0
-		; Death
-		!byte $78,$79,$7a,$7b
-
-		; KNIGHT
-		; Standing facing south
-		!byte $b0,$b0,$b1,$b1
-		; Standing facing west
-		!byte $b2,$b2,$b3,$b3
-		; Standing facing north
-		!byte $b8,$b8,$b9,$b9
-		; Standing facing east
-		!byte $ba,$ba,$bb,$bb
-		; Run south
-		!byte $b0,$b1,$b0,$b1
-		; Run west
-		!byte $b2,$b3,$b2,$b3
-		; Run north
-		!byte $b8,$b9,$b8,$b9
-		; Run east
-		!byte $ba,$bb,$ba,$bb
-		; Attack south
-		!byte $b0,$b1,$b0,$b1
-		; Attack west
-		!byte $b2,$b3,$b2,$b3
-		; Attack north
-		!byte $b8,$b9,$b8,$b9
-		; Attack east
-		!byte $ba,$bb,$ba,$bb
-		; Death
-		!byte $78,$79,$7a,$7b
-
-NpcImageList	!byte $60,$61
-
-
-; hp array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
-mobtable_hp
-		!byte $02,$04,$0a,$14,$05,$08,$14,$1e
-		!byte $0a,$0e,$1e,$28,$14,$1e,$32,$50
-
-; ap array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
-mobtable_ap
-		!byte $01,$01,$02,$04,$02,$02,$04,$08
-		!byte $04,$04,$08,$16,$08,$08,$16,$32
-
-; gold array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
-mobtable_gold
-		!byte $01,$04,$10,$15,$12,$15,$20,$25
-		!byte $15,$20,$25,$30,$25,$40,$75,$96
-
-; loot index array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
-mobtable_lootidx
-		!byte $00,$01,$02,$03,$00,$04,$05,$06
-		!byte $07,$08,$09,$0a,$0b,$0c,$0d,$0e
-
-; subpixel speed ratio is 1/2; 1 = 0.5, 2 = 1, etc...
-mobtable_speed	!byte $01,$02,$01,$01,$01,$02,$02,$02
-		!byte $02,$03,$02,$02,$02,$04,$02,$02
-
-; mob colors
-mob_fill_table
-		!byte $05,$01,$00,$0f,$0e,$01,$00,$0e
-		!byte $0a,$01,$00,$04,$07,$01,$00,$08
-mob_contour_table
-		!byte $0d,$00,$01,$00,$06,$06,$03,$00
-		!byte $04,$04,$04,$00,$08,$08,$08,$00
-npc_fill_table
-		!byte $05,$0e
-npc_contour_table
-		!byte $00,$00
-
-damage_flash
-		!byte $07,$07,$02,$02
-loot_list
-		!byte $00,$80,$81,$82	; [nothing, heart, gold, bigkey]
-loot_colors_fill
-		!byte $00,$01,$07,$07
-loot_colors_contour
-		!byte $00,$02,$01,$01
-
-fadeout_colors_bg_border
-		!byte $00,$00,$00,$00,$09,$09,$09,$09
-fadeout_colors_extra_color1
-		!byte $09,$09,$0b,$0b,$0c,$0c,$0f,$0f
-fadeout_colors_extra_color2
-		!byte $09,$09,$09,$09,$0b,$0b,$0b,$0b
-gradient_fader
-		!byte $00,$07,$04,$06,$06,$06,$00,$05
-		!byte $08,$0f,$0c,$0e,$0e,$0e,$08,$0d
-
-		; 1 = door
-		; 2 = blocking
-		; 3 = tree
-		; 4 = chest
-		; 5 = locked door
-		; 6 = runestone
-		; 7 = infostone
-		; 8 = crushable boulder
-		; 9 = movable pillar
-		; a = cenotaph
-collision_map	!byte $00,$00,$00,$00,$00,$00,$00,$00
-		!byte $00,$00,$00,$00,$00,$01,$01,$00
-		!byte $00,$00,$00,$00,$02,$03,$04,$04
-		!byte $02,$02,$02,$02,$05,$02,$02,$02
-		!byte $02,$02,$02,$06,$07,$08,$09,$02
-		!byte $02,$02,$02,$02,$00,$02,$02,$0a
-		!byte $00,$00,$00,$00,$00,$00,$00,$00
-		!byte $00,$00,$00,$00,$00,$00,$02,$02
-
-; SFX suite	
-; 		format is: BYTE<8 bits>,BYTE<high 4 bits|low 4 bits>, ...
-
-;		SFX format:
-;		  <attack|decay>, <systain|release>, <1 byte pulse width (reversed high/low bytes)>,
-;		  <wave form value = [$10,$11,$20,$21,$40,$41,$80,$81]> OR 
-;		  <absolute note value n = [n >$81, n < $c0] >, ...
-sword_swing
-		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
-
-; -----------------------------------------------------------------
+;		Items in the mask:
+;		1 - Arrows
+;		2 - Necklace
+;		4 - Shield
+;		8 - Master key
+;		16 - Torch
+;		32 - Gauntlet
+;		64 - Raft
+;		128 - Armor
+items_mask	!byte $00,$00
+;-----------------------------------------------------------
 
 end_code_c000
 
@@ -7688,11 +8163,18 @@ end_code_c000
 
 ; -----------------------------------------------------------------
 ; $d000
-; $e000 - $efff ; sprites
 
 ; $f000 - player_max_hp
 ; .... see beginning of this file for content in this RAM area.
 
 ;		*=$fa00
+; -------------------------------------------------
+;
+;		TILE BUFFER AREA
+;		; $fa00 - $faff
+;		; do not allocate anything else here
+;
+; -------------------------------------------------
+
 ;end_code_f000
 
