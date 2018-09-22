@@ -51,21 +51,33 @@ set /A CORETABLES_LEN=%CORETABLES_END%-%CORETABLESLOC%
 
 set DISKIMAGE_NAME=aad.d64
 set MAIN_PRG=aadangerous
-set OUTDOOR_WORLD=outdoor.pck
 set MAIN_UNPACKED_PRG=aad_unpacked.prg
 set MUSIC_BIN=game_music.bin
 set CHARSET_BIN=aad_charset_big.bin
 set SPRITES_BIN=sprites_2.bin
-set OUTDOOR_UNPACKED_BIN=aad_map_big.rle
+set OUTDOOR_RLE=aad_map_big.rle
 set CHARSET_ATTRS_BIN=aad_charset_attrs_big.bin
 set TILES_BIN=aad_tiles_big.bin
 set OUTDOOR_TABLES_PRG=outdoortables.prg
 set CORE_TABLES_PRG=coretables.prg
 
+set DUNGEON_0_CHARSET_BIN=aad_d0_charset.bin
+set DUNGEON_0_CHARSET_ATTRS_BIN=aad_d0_charset_attrs.bin
+set DUNGEON_0_TILES_BIN=aad_d0_tiles.bin
+set DUNGEON_0_RLE=aad_d0_map.rle
+set DUNGEON_0_SPRITES_BIN=aad_sprites_dungeon0.bin
+set DUNGEON_0_TABLES_PRG=d0tables.prg
+
+
 REM -- Short file names for 1541 floppy --
 set OUTDOOR_FILE=od
 set OUTDOOR_SPRITES_FILE=ods
 set OUTDOOR_CHARSET_FILE=odc
+set OUTDOOR_TABLES_FILE=odt
+set DUNGEON_0_FILE=d0
+set DUNGEON_0_SPRITES_FILE=d0s
+set DUNGEON_0_CHARSET_FILE=d0c
+set DUNGEON_0_TABLES_FILE=d0t
 set DUNGEON_1_FILE=d1
 set DUNGEON_1_SPRITES_FILE=d1s
 set DUNGEON_2_FILE=d2
@@ -80,13 +92,15 @@ set DUNGEON_6_FILE=d6
 set DUNGEON_6_SPRITES_FILE=d6s
 set DUNGEON_7_FILE=d7
 set DUNGEON_7_SPRITES_FILE=d7s
-set RATDUNGEON_FILE=rd
-set RATDUNGEON_SPRITES_FILE=rds
 
 REM -- This is the packer command which will pack all files into one single compressed binary + initial loader routine.
 REM -- TODO: Later, remove the map + charset attrs + tiles + sprites, replace with intro screen + code
 
-exomizer sfx basic,%BASEADDR% -s "lda #0 sta $d020" -x "inc $d020 dec $d020" %MAIN_UNPACKED_PRG%,%BASEADDR%,,%PARTONE_LEN% %MUSIC_BIN%@%MUSICLOC% %MAIN_UNPACKED_PRG%,%PARTTWO_START%,%PARTTWO_OFFSET%,%PARTTWO_LEN% %CHARSET_BIN%@%CHARSETLOC% %SPRITES_BIN%@%SPRITELOC% %OUTDOOR_UNPACKED_BIN%@%MAPLOC% %CHARSET_ATTRS_BIN%@%MAPCOLSLOC% %TILES_BIN%@%MAPTILESLOC% %MAIN_UNPACKED_PRG%,%PARTTHREE_START%,%PARTTHREE_OFFSET%,%PARTTHREE_LEN% %OUTDOOR_TABLES_PRG%,%ODTABLESLOC%,,%ODTABLES_LEN% %CORE_TABLES_PRG%,%CORETABLESLOC%,,%CORETABLES_LEN% -o %MAIN_PRG%
+echo =======================================================================
+echo ======================== Main PRG =====================================
+echo =======================================================================
+
+exomizer sfx basic,%BASEADDR% -s "lda #0 sta $d020" -x "inc $d020 dec $d020" %MAIN_UNPACKED_PRG%,%BASEADDR%,,%PARTONE_LEN% %MUSIC_BIN%@%MUSICLOC% %MAIN_UNPACKED_PRG%,%PARTTWO_START%,%PARTTWO_OFFSET%,%PARTTWO_LEN% %CHARSET_BIN%@%CHARSETLOC% %SPRITES_BIN%@%SPRITELOC% %OUTDOOR_RLE%@%MAPLOC% %CHARSET_ATTRS_BIN%@%MAPCOLSLOC% %TILES_BIN%@%MAPTILESLOC% %MAIN_UNPACKED_PRG%,%PARTTHREE_START%,%PARTTHREE_OFFSET%,%PARTTHREE_LEN% %OUTDOOR_TABLES_PRG%,%ODTABLESLOC%,,%ODTABLES_LEN% %CORE_TABLES_PRG%,%CORETABLESLOC%,,%CORETABLES_LEN% -o %MAIN_PRG%
 if %ERRORLEVEL% == 0 (
 	echo Packing main file was successful!
 ) else (
@@ -95,8 +109,26 @@ if %ERRORLEVEL% == 0 (
 	exit /b
 )
 
+echo =======================================================================
+echo ======================== Outdoor Tables ===============================
+echo =======================================================================
+
+REM -- This command will crunch the main outdoor tables binary file and use the specified load address $a000, decrunched file will be relocated to $e000
+exomizer mem -l 0xa000 %OUTDOOR_TABLES_PRG% -o %OUTDOOR_TABLES_FILE%
+if %ERRORLEVEL% == 0 (
+	echo Packing main charset file was successful!
+) else (
+	echo Error!
+	pause
+	exit /b
+)
+
+echo =======================================================================
+echo ======================== Outdoor RLE Map ==============================
+echo =======================================================================
+
 REM -- This command will crunch the main outdoor binary map (RLE packed) file and use the specified load address $5000, decrunched files will be relocated to $7000
-exomizer mem -l 0x5000 %OUTDOOR_UNPACKED_BIN%@0x7000 %CHARSET_ATTRS_BIN%@%MAPCOLSLOC% %TILES_BIN%@%MAPTILESLOC% -o %OUTDOOR_FILE%
+exomizer mem -l 0x5000 %OUTDOOR_RLE%@0x7000 %CHARSET_ATTRS_BIN%@%MAPCOLSLOC% %TILES_BIN%@%MAPTILESLOC% -o %OUTDOOR_FILE%
 if %ERRORLEVEL% == 0 (
 	echo Packing main file was successful!
 ) else (
@@ -104,6 +136,10 @@ if %ERRORLEVEL% == 0 (
 	pause
 	exit /b
 )
+
+echo =======================================================================
+echo ======================== Outdoor Sprites ==============================
+echo =======================================================================
 
 REM -- This command will crunch the main outdoor sprites binary file and use the specified load address $4ffe (using a small safety offset), decrunched file will be relocated to $5000
 exomizer mem -l 0x4ffe %SPRITES_BIN%@0x5000 -o %OUTDOOR_SPRITES_FILE%
@@ -115,6 +151,10 @@ if %ERRORLEVEL% == 0 (
 	exit /b
 )
 
+echo =======================================================================
+echo ======================== Outdoor Charset ==============================
+echo =======================================================================
+
 REM -- This command will crunch the main outdoor charset binary file and use the specified load address $0400, decrunched file will be relocated to $4800
 exomizer mem -l 0x47fe %CHARSET_BIN%@0x4800 -o %OUTDOOR_CHARSET_FILE%
 if %ERRORLEVEL% == 0 (
@@ -124,6 +164,68 @@ if %ERRORLEVEL% == 0 (
 	pause
 	exit /b
 )
+
+
+REM --------------------------------------
+REM -- DUNGEON 0
+REM --------------------------------------
+
+echo =======================================================================
+echo ======================== Dungeon 0 Tables =============================
+echo =======================================================================
+
+REM -- This command will crunch dungeon 0 tables binary file and use the specified load address $a000, decrunched file will be relocated to $e000
+exomizer mem -l 0xa000 %DUNGEON_0_TABLES_PRG% -o %DUNGEON_0_TABLES_FILE%
+if %ERRORLEVEL% == 0 (
+	echo Packing main charset file was successful!
+) else (
+	echo Error!
+	pause
+	exit /b
+)
+
+echo =======================================================================
+echo ======================== Dungeon 0 RLE Map ============================
+echo =======================================================================
+
+REM -- This command will crunch dungeon 0 binary map (RLE packed) file and use the specified load address $5000, decrunched files will be relocated to $7000
+exomizer mem -l 0x5000 %DUNGEON_0_RLE%@0x7000 %DUNGEON_0_CHARSET_ATTRS_BIN%@%MAPCOLSLOC% %DUNGEON_0_TILES_BIN%@%MAPTILESLOC% -o %DUNGEON_0_FILE%
+if %ERRORLEVEL% == 0 (
+	echo Packing main file was successful!
+) else (
+	echo Error!
+	pause
+	exit /b
+)
+
+REM echo =======================================================================
+REM echo ======================== Dungeon 0 RLE Map ============================
+REM echo =======================================================================
+
+REM -- This command will crunch dungeon 0 sprites binary file and use the specified load address $4ffe (using a small safety offset), decrunched file will be relocated to $5000
+REM exomizer mem -l 0x4ffe %DUNGEON_0_SPRITES_BIN%@0x5000 -o %DUNGEON_0_SPRITES_FILE%
+REM if %ERRORLEVEL% == 0 (
+REM	echo Packing main sprites file was successful!
+REM ) else (
+REM	echo Error!
+REM	pause
+REM	exit /b
+REM )
+
+echo =======================================================================
+echo ======================== Dungeon 0 Charset ============================
+echo =======================================================================
+
+REM -- This command will crunch dungeon 0 charset binary file and use the specified load address $0400, decrunched file will be relocated to $4800
+exomizer mem -l 0x47fe %DUNGEON_0_CHARSET_BIN%@0x4800 -o %DUNGEON_0_CHARSET_FILE%
+if %ERRORLEVEL% == 0 (
+	echo Packing main charset file was successful!
+) else (
+	echo Error!
+	pause
+	exit /b
+)
+
 
 
 REM
@@ -141,7 +243,7 @@ if %ERRORLEVEL% == 0 (
 	exit /b
 )
 
-c1541 -attach %DISKIMAGE_NAME% -write %MAIN_PRG% -write %OUTDOOR_FILE% -write %OUTDOOR_SPRITES_FILE% -write %OUTDOOR_CHARSET_FILE%
+c1541 -attach %DISKIMAGE_NAME% -write %MAIN_PRG% -write %OUTDOOR_TABLES_FILE% -write %OUTDOOR_FILE% -write %OUTDOOR_SPRITES_FILE% -write %OUTDOOR_CHARSET_FILE% -write %DUNGEON_0_TABLES_FILE% -write %DUNGEON_0_FILE% -write %DUNGEON_0_SPRITES_FILE% -write %DUNGEON_0_CHARSET_FILE%
 if %ERRORLEVEL% == 0 (
 	echo Writing files to disk was successful!
 	pause

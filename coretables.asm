@@ -140,7 +140,7 @@ frame
 ;-----------------------------------------------------------
 ; temporary color memory buffer used with screen transitions
 ;-----------------------------------------------------------
-colorbuffer	!fill 1024,$00
+;colorbuffer	!fill 1024,$00
 
 ;-----------------------------------------------------------
 ; tile buffer for unpacking and storing current map room
@@ -200,9 +200,88 @@ plr_r_last_tilepos
 plr_r_last_tileidx
 		!byte $00
 
+; --------------------------------------------
+; Player's start location position arrays.
+; --------------------------------------------
+StartLocX	!byte 8,30,0,0,0,0,0,0
+StartLocY	!byte 91,34,0,0,0,0,0,0
+
+MapStartX	!byte 0,20,0,0,0,0,0,0
+MapStartHiX	!byte 0,0,0,0,0,0,0,0
+MapStartY	!byte 84,24,0,0,0,0,0,0
+
+BorderColor	!byte 0,0,0,0,0,0,0,0
+BGColor		!byte 9,0,0,0,0,0,0,0
+MultiColor1	!byte 15,12,0,0,0,0,0,0
+MultiColor2	!byte 11,9,0,0,0,0,0,0
 
 ; --------------------------------------------
+;  Persistent changes (introduced by switches)
+;  allows up to 7 tiles per map
+; --------------------------------------------
+pc_map_idx
+		!byte $00
+		!byte pc_target_list_d0-pc_target_list_base
+		!byte pc_target_list_d1-pc_target_list_base
+		!byte pc_target_list_d2-pc_target_list_base
+		!byte pc_target_list_d3-pc_target_list_base
+		!byte pc_target_list_d4-pc_target_list_base
+		!byte pc_target_list_d5-pc_target_list_base
+		!byte pc_target_list_d6-pc_target_list_base
+		!byte pc_target_list_d7-pc_target_list_base
 
+; byte sequences of room pos, tile pos, and tile idx
+pc_target_list_base
+pc_target_list_outdoor
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d1
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d2
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d3
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d4
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d5
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d6
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d7
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+
+
+
+
+; --------------------------------------------
 ; SFX suite	
 ; 		format is: BYTE<8 bits>,BYTE<high 4 bits|low 4 bits>, ...
 
@@ -214,6 +293,5 @@ sword_swing
 		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
 
 ; -----------------------------------------------------------------
-
 
 coretables_end

@@ -6,9 +6,7 @@
 import sys
 import struct
 
-C_INFILE_NAME = "aad_map_big.bin"
-C_BINFILE_NAME = "aad_map_big.rle"
-C_PRGFILE_NAME = "aad_map_big.prg"
+C_RLEFILE_NAME = "out.rle"
 MAP_WIDTH = 16
 MAP_HEIGHT = 12
 MAP_SIZE = MAP_WIDTH * MAP_HEIGHT
@@ -22,7 +20,7 @@ MAP_STRIDE = MAP_WIDTH * ROOM_SIZE
 STATE_NEW_BYTE = 0
 STATE_LOOKAHEAD = 1
 
-DEBUG = True
+DEBUG = False
 
 
 # Array comparison function
@@ -166,18 +164,22 @@ def print_compressed_rooms(compressed_chunks):
     while pos<len(compressed_chunks):
         if compressed_bytes_left == 0:
             compressed_bytes_left = compressed_chunks[pos]
-            print "\n\nRoom [%d, %d]\n   Length: %d" % (room_coord%16, int(room_coord/16), compressed_bytes_left)
+            if DEBUG:
+                print "\n\nRoom [%d, %d]\n   Length: %d" % (room_coord%16, int(room_coord/16), compressed_bytes_left)
             if compressed_bytes_left == 0:
                 pos += ROOM_SIZE    # Skips the room entirely in case room was not compressed
-                print "Uncompressed data won't be printed."
+                if DEBUG:
+                    print "Uncompressed data won't be printed."
             room_coord += 1 # Increment only when the data for one room has been processed
             column_index = 0
         else:
-            sys.stdout.write("%03d " % compressed_chunks[pos])
+            if DEBUG:
+                sys.stdout.write("%03d " % compressed_chunks[pos])
             column_index += 1
 
             if column_index == 20:  # Pretty print output of only 20 columns of bytes
-                sys.stdout.write("\n")
+                if DEBUG:
+                    sys.stdout.write("\n")
                 column_index = 0
 
             compressed_bytes_left -= 1
@@ -296,13 +298,24 @@ def write_compressed_files(binfilename, dictionary_bytes, compressed_bytes):
 
 def main():
 
-    # By default use the file name 'aad_map_big.bin'
-    filename = C_INFILE_NAME
-    if len(sys.argv) == 2:
+    filename = ""
+    outfile = C_RLEFILE_NAME
+    if len(sys.argv) < 2:
+        print "Input file name is mandatory!"
+        print "Usage: %s <infile> <outfile>" % sys.argv[0]
+        return 1
+    elif len(sys.argv) == 2:
         filename = sys.argv[1]  # It can also be passed as one argument to the script
+    elif len(sys.argv) == 3:
+        filename = sys.argv[1]
+        outfile = sys.argv[2]   # Output file name as third argument
+    else:
+        print "Too many arguments passed to script!"
+        print "Usage: %s <infile> <outfile>" % sys.argv[0]
+        
 
     # Read the input file
-    print "Read input binary data..."
+    print "Read input binary data... : '%s'" % filename
     byte_array = read_binary_file(filename)
 
     if DEBUG:
@@ -349,7 +362,7 @@ def main():
     dictionary_bytes = reencode_dictionary(dictionary)
 
     # Finally write the file
-    write_compressed_files(C_BINFILE_NAME, dictionary_bytes, optimized_and_compressed_array)
+    write_compressed_files(outfile, dictionary_bytes, optimized_and_compressed_array)
 
 
 

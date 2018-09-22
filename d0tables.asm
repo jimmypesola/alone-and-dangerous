@@ -1,5 +1,5 @@
-!sl	"outdoortables_labels.a"
-!to	"outdoortables.prg", cbm
+!sl	"d0tables_labels.a"
+!to	"d0tables.prg", cbm
 
 
 ; ----------------------
@@ -80,59 +80,55 @@ ct_cenotaph	= 10	; cenotaph  - a grave, can spawn zombies/skeletons or other mon
 ct_switch	= 11	; switch    - when interacted with it toggles its state, and can change other tiles.
 
 
-; Outdoor map specific data
+; Dungeon 0 map specific data
 		*=$e000		; will be loaded here
 
 ;---------------------------------------------------------------------------------------------------------
-; MAIN WORLD DOORS - Each cell here is a reference to another cell. Store on disk with world.
+; DUNGEON 0 DOORS  - Each cell here is a reference to another cell.
 ;                    These tables can be loaded from disk (they will not change.)
 ;---------------------------------------------------------------------------------------------------------
 doortable	; e0-ef indicates offset in "doortablemulti". $f0-$fe are dungeons 1-15, $ff means no door
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $ff,$83,$83,$80,$ff,$87,$ff,$88,$ff,$89,$8a,$ff,$8b,$ff,$ff,$8f ; $00
-		!byte $ff,$85,$86,$ff,$81,$ff,$ff,$ff,$ff,$ff,$ff,$8d,$ff,$8e,$ff,$ff ; $10
-		!byte $ff,$84,$92,$82,$8c,$ff,$93,$96,$e0,$ff,$97,$ff,$99,$ff,$91,$9a ; $20
-		!byte $9b,$9f,$ff,$ff,$ff,$9d,$9c,$ff,$95,$ff,$ff,$98,$ff,$ff,$ff,$ff ; $30
-		!byte $ff,$9e,$c0,$ff,$ff,$ff,$a1,$a2,$ff,$a3,$ff,$a6,$a5,$a7,$aa,$a8 ; $40
-		!byte $a9,$f0,$a0,$ab,$ff,$ac,$ad,$b4,$ff,$e1,$e2,$ff,$ff,$ff,$ff,$b5 ; $50
-		!byte $f1,$ff,$b6,$b8,$ff,$ff,$ff,$b9,$ff,$ba,$ff,$ff,$bb,$bf,$ff,$ff ; $60
-		!byte $bc,$bd,$be,$ff,$ff,$ff,$a4,$c1,$c2,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $70
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $00
+		!byte $ff,$ff,$20,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $10
+		!byte $12,$f0,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $20
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $30
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $40
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $50
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $60
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $70
 		; --------------------------------------------------------------------------
-		!byte $03,$14,$23,$e3,$21,$11,$12,$05,$07,$09,$0a,$0c,$24,$1b,$1d,$0f ; $80
-		!byte $28,$2e,$22,$26,$28,$38,$27,$2a,$3b,$2c,$2f,$30,$36,$35,$41,$31 ; $90
-		!byte $52,$46,$47,$49,$76,$4c,$4b,$4d,$4f,$50,$4e,$53,$55,$56,$59,$59 ; $a0
-		!byte $59,$5a,$5a,$5a,$57,$5f,$62,$60,$63,$67,$69,$6c,$70,$71,$72,$6d ; $b0 ; $b7 can be freed, referenced from $60 earlier
-		!byte $42,$77,$78                                                     ; $c0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $80
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $90
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $a0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $b0
+		!byte $ff,$ff,$ff                                                     ; $c0
 
 doortablemulti
-		!byte $94,$90,$ff
-		!byte $ae,$af,$b0,$ff
-		!byte $b1,$b2,$b3,$ff
-		!byte $01,$02,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
 
 doorexits	; Exit tile position on *target* screen if door exists on that screen.
 		; f0-ff indicates offset in "doorexitsmulti".
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$2b,$be,$2a,$00,$2b,$00,$be,$00,$be,$be,$00,$be,$00,$00,$2b ; $00
-		!byte $00,$3e,$33,$00,$be,$00,$00,$00,$00,$00,$00,$3e,$00,$33,$00,$00 ; $10
-		!byte $00,$2a,$be,$be,$be,$00,$be,$be,$f0,$00,$be,$00,$be,$00,$be,$be ; $20
-		!byte $be,$be,$00,$00,$00,$2a,$2a,$00,$be,$00,$00,$be,$00,$00,$00,$00 ; $30
-		!byte $00,$2a,$be,$00,$00,$00,$3e,$33,$00,$be,$00,$be,$2a,$2a,$be,$be ; $40
-		!byte $be,$00,$2a,$be,$00,$2a,$be,$be,$00,$f1,$f2,$00,$00,$00,$00,$be ; $50
-		!byte $be,$00,$be,$be,$00,$00,$00,$be,$00,$be,$00,$00,$be,$2a,$00,$00 ; $60
-		!byte $be,$be,$be,$00,$00,$00,$be,$3e,$33,$00,$00,$00,$00,$00,$00,$00 ; $70
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
+		!byte $00,$00,$8d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $10
+		!byte $5f,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $20
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $30
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $40
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $50
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $60
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $70
 		; -------------------------------------------------------------------
-		!byte $36,$84,$a9,$f3,$6e,$39,$2a,$41,$92,$bf,$60,$6d,$80,$ae,$73,$3e ; $80
-		!byte $af,$8f,$be,$6c,$6d,$2f,$d0,$6e,$6d,$5d,$18,$a5,$6b,$2e,$b6,$aa ; $90
-		!byte $90,$c5,$b7,$d4,$6c,$7d,$59,$40,$83,$40,$94,$1d,$b9,$81,$2a,$b9 ; $a0
-		!byte $bd,$3e,$31,$b5,$69,$92,$84,$82,$52,$40,$70,$7f,$80,$5e,$37,$ad ; $b0
-		!byte $a8,$58,$1a                                                     ; $c0
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $80
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $90
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $a0
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $b0
+		!byte $00,$00,$00                                                     ; $c0
 
 doorexitsmulti
-		!byte $2a,$be,$ff
-		!byte $be,$be,$be,$ff
-		!byte $3e,$33,$be,$ff
-		!byte $34,$5a,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
 
 ; extensions
 ;		$00-$3f = locked doors (if tile #1 then must magically be revealed) (position) (if tile #2 then reference to loot_trigger table instead)
@@ -144,25 +140,26 @@ doorexitsmulti
 ; notes:        - If $00-$3f but no door nor grass, then reveal a life container instead.
 extensions
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$80,$81,$ff,$c0,$82,$ff,$83,$ff,$84,$85,$ff,$86,$ff,$ff,$c1
-		!byte $ff,$ff,$ff,$87,$c2,$ff,$ff,$ff,$ff,$88,$c3,$40,$ff,$89,$ff,$ff
-		!byte $ff,$01,$8a,$ff,$ff,$ff,$8b,$8c,$02,$ff,$03,$ff,$8d,$ff,$04,$8e
-		!byte $8f,$90,$91,$ff,$ff,$ff,$92,$ff,$05,$ff,$ff,$ff,$ff,$93,$ff,$ff
-		!byte $ff,$c4,$94,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$95,$06,$96,$97,$98
-		!byte $ff,$ff,$ff,$99,$41,$ff,$07,$9a,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $9b,$ff,$ff,$9c,$ff,$ff,$ff,$9d,$ff,$9e,$ff,$ff,$9f,$a0,$ff,$a1
-		!byte $ff,$ff,$a2,$ff,$08,$ff,$a3,$ff,$a4,$ff,$ff,$ff,$ff,$ff,$ff,$09
+		!byte $ff,$ff,$00,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$f2,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $f0,$ff,$f1,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		; -------------------------------------------------------------------
-		!byte $42,$43,$ff,$44,$45,$ff,$ff,$44,$45,$45,$45,$45,$46,$ff,$47,$c5
-		!byte $48,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff
 
 ; screen tile positions for:
 locked_doors		; $00 - $3f
+		!byte loot_trig0-loot_triggers
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
 ; screen tile positions and content for:
 chests			; $40 - $7f
@@ -176,11 +173,12 @@ runestones		; $c0 - $ef
 		!byte $ff
 
 switch_sets	; indices $f0 - $fe, values are offsets in switch_lists
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $00,$02,$05,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
 ; switches
-switch_lists	; padding bytes (32 bytes in total for switch_lists)
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+switch_lists
+		!byte switch_0-swbase,$ff, switch_1-swbase, switch_2-swbase, $ff, switch_3-swbase, switch_4-swbase, $ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; padding bytes (32 bytes in total for switch_lists)
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
 ; switch	(state, position, AND condition, targets)
@@ -198,29 +196,29 @@ switch_lists	; padding bytes (32 bytes in total for switch_lists)
 ;		   If AND condition is set to $fe, it will be a toggle switch instead
 ;		   If AND condition is set to $ff, then there is no condition.
 swbase
-switch_0	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-switch_1	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-switch_2	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-switch_3	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-switch_4	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+switch_0	!byte $00, $11, $ff, swtarget0-swtargetbase, swtarget1-swtargetbase,$ff,$ff,$ff
+switch_1	!byte $00, $16, switch_2-swbase, swtarget2-swtargetbase,$ff,$ff,$ff,$ff
+switch_2	!byte $00, $23, switch_1-swbase, swtarget2-swtargetbase,$ff,$ff,$ff,$ff
+switch_3	!byte $00, $90, switch_4-swbase+$80, swtarget3-swtargetbase, swtarget4-swtargetbase,$ff,$ff,$ff
+switch_4	!byte $00, $92, switch_3-swbase+$80, swtarget3-swtargetbase, swtarget4-swtargetbase,$ff,$ff,$ff
 switch_5	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 switch_6	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 switch_7	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 
-; switch target (room, position, tile_on, tile_off)
+; switch target (room, position, tile_off, tile_on)
 swtargetbase
-swtarget0	!byte $ff, $ff, 0, 0
-swtarget1	!byte $ff, $ff, 0, 0
-swtarget2	!byte $ff, $ff, 0, 0
-swtarget3	!byte $ff, $ff, 0, 0
-swtarget4	!byte $ff, $ff, 0, 0
+swtarget0	!byte $21, $c2, 19, 2
+swtarget1	!byte $21, $d6, 19, 2
+swtarget2	!byte $22, $5c, 19, 2
+swtarget3	!byte $12, $5a, 2, 20
+swtarget4	!byte $12, $a5, 19, 2
 swtarget5	!byte $ff, $ff, 0, 0
 swtarget6	!byte $ff, $ff, 0, 0
 swtarget7	!byte $ff, $ff, 0, 0
 
 loot_triggers
 		; (screen pos, sprite frame)
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+loot_trig0	!byte $48,f_sword,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
@@ -313,14 +311,14 @@ world
 		; mobs_entries references
 
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $01,$02,$02,$02,$03,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
-		!byte $04,$04,$05,$05,$05,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
-		!byte $04,$06,$06,$05,$05,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
-		!byte $04,$06,$06,$07,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
-		!byte $04,$04,$06,$07,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
-		!byte $0c,$07,$06,$07,$06,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
-		!byte $09,$0b,$00,$06,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $06
-		!byte $00,$0a,$08,$0a,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $07
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
+		!byte $0e,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
+		!byte $0e,$00,$0a,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $06
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $07
 
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $08
@@ -484,13 +482,13 @@ gradient_fader
 		; 9 = movable pillar
 		; a = cenotaph
 		; b = switch
-collision_map	!byte $00,$00,$00,$00,$00,$00,$00,$00
-		!byte $00,$00,$00,$00,$00,$01,$01,$00
-		!byte $00,$00,$00,$00,$02,$03,$04,$04
-		!byte $02,$02,$02,$02,$05,$02,$02,$02
-		!byte $02,$02,$02,$06,$07,$08,$09,$02
-		!byte $02,$02,$02,$02,$00,$02,$02,$0a
+collision_map	!byte $02,$00,$00,$00,$00,$00,$00,$00
+		!byte $00,$00,$00,$02,$02,$02,$02,$02
+		!byte $01,$01,$02,$02,$02,$02,$04,$04
+		!byte $02,$02,$02,$02,$02,$02,$02,$02
+		!byte $02,$02,$02,$02,$02,$0b,$0b,$06
+		!byte $01,$02,$02,$02,$02,$02,$02,$0a
 		!byte $00,$00,$00,$00,$00,$00,$00,$00
 		!byte $00,$00,$00,$00,$00,$00,$02,$02
 
-outdoortables_end
+d0tables_end
