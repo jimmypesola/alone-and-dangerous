@@ -54,7 +54,7 @@ set MAIN_PRG=aadangerous
 set MAIN_UNPACKED_PRG=aad_unpacked.prg
 set MUSIC_BIN=game_music.bin
 set CHARSET_BIN=aad_charset_big.bin
-set SPRITES_BIN=sprites_2.bin
+set SPRITES_BIN=aad_sprites_outdoor.bin
 set OUTDOOR_RLE=aad_map_big.rle
 set CHARSET_ATTRS_BIN=aad_charset_attrs_big.bin
 set TILES_BIN=aad_tiles_big.bin
@@ -198,19 +198,19 @@ if %ERRORLEVEL% == 0 (
 	exit /b
 )
 
-REM echo =======================================================================
-REM echo ======================== Dungeon 0 RLE Map ============================
-REM echo =======================================================================
+echo =======================================================================
+echo ======================== Dungeon 0 Sprites ============================
+echo =======================================================================
 
 REM -- This command will crunch dungeon 0 sprites binary file and use the specified load address $4ffe (using a small safety offset), decrunched file will be relocated to $5000
-REM exomizer mem -l 0x4ffe %DUNGEON_0_SPRITES_BIN%@0x5000 -o %DUNGEON_0_SPRITES_FILE%
-REM if %ERRORLEVEL% == 0 (
-REM	echo Packing main sprites file was successful!
-REM ) else (
-REM	echo Error!
-REM	pause
-REM	exit /b
-REM )
+exomizer mem -l 0x4ffe %DUNGEON_0_SPRITES_BIN%@0x5000 -o %DUNGEON_0_SPRITES_FILE%
+if %ERRORLEVEL% == 0 (
+	echo Packing dungeon 0 sprites file was successful!
+) else (
+	echo Error!
+	pause
+	exit /b
+)
 
 echo =======================================================================
 echo ======================== Dungeon 0 Charset ============================
@@ -219,7 +219,7 @@ echo =======================================================================
 REM -- This command will crunch dungeon 0 charset binary file and use the specified load address $0400, decrunched file will be relocated to $4800
 exomizer mem -l 0x47fe %DUNGEON_0_CHARSET_BIN%@0x4800 -o %DUNGEON_0_CHARSET_FILE%
 if %ERRORLEVEL% == 0 (
-	echo Packing main charset file was successful!
+	echo Packing dungeon 0 charset file was successful!
 ) else (
 	echo Error!
 	pause

@@ -39,6 +39,8 @@ enemy_pull_force_x
 		!byte $00,$00,$00,$00,$00,$00,$00,$00
 enemy_pull_force_y
 		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_dir
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
 
 CurrentRoomIdx	!byte $00	; 1-byte room index on map
 
@@ -219,7 +221,7 @@ MultiColor2	!byte 11,9,0,0,0,0,0,0
 ;  Persistent changes (introduced by switches)
 ;  allows up to 7 tiles per map
 ; --------------------------------------------
-pc_map_idx
+pc_map_idx	; Do not modify this table!
 		!byte $00
 		!byte pc_target_list_d0-pc_target_list_base
 		!byte pc_target_list_d1-pc_target_list_base
@@ -230,7 +232,8 @@ pc_map_idx
 		!byte pc_target_list_d6-pc_target_list_base
 		!byte pc_target_list_d7-pc_target_list_base
 
-; byte sequences of room pos, tile pos, and tile idx
+; byte sequences of room pos, tile pos, and tile idx.
+; Do not modify these tables! They are used as storage for switch effects.
 pc_target_list_base
 pc_target_list_outdoor
 		!byte $ff,$ff,$ff,$ff,$ff,$ff

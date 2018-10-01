@@ -1,30 +1,44 @@
 !sl	"d0tables_labels.a"
 !to	"d0tables.prg", cbm
 
+f_base = 64
 
 ; ----------------------
 ;  Enemy frame constants
 ; ----------------------
-f_death 	= $60
-f_blob 		= $92
-f_spider	= $98
-f_skeleton	= $a8
-f_knight	= $b8
-f_bat 		= $92
-f_rat		= $98
+f_death 	= f_base + 32
+f_bat 		= f_base + 96
+f_rat		= f_base + 104
+f_rat_boss	= f_base + 80
+f_rat_boss_claw = f_base + 99
+f_blob		= f_base + 122
+
+; ----------------------
+;  NPC frame constants
+; ----------------------
+f_man 		= f_base + 120
+f_woman		= f_base + 120
+f_boy		= f_base + 121
+f_girl		= f_base + 121
 
 ; ----------------------
 ;  Item frame constants
 ; ----------------------
-f_bow		= $8b
-f_necklace	= $81
-f_shield	= $89
-f_masterkey	= $71
-f_torch		= $72
-f_gauntlet	= $73
-f_raft		= $82
-f_armor		= $83
+f_axe		= f_base + 72
+f_shield	= f_base + 73
+f_sword		= f_base + 74
+f_bow		= f_base + 75
+f_extra_heart	= f_base + 64
+f_necklace	= f_base + 65
+f_raft		= f_base + 66
+f_armor		= f_base + 67
+f_key		= f_base + 48
+f_masterkey	= f_base + 49
+f_torch		= f_base + 50
+f_gauntlet	= f_base + 51
 
+;  Common constants
+;
 ; ----------------------
 ;  Loot frame constants
 ; ----------------------
@@ -33,7 +47,6 @@ f_heart		= $78
 f_gold		= $79
 f_potion	= $7a
 f_arrows	= $7b
-f_sword		= $8a
 
 ; ----------------------
 ;  Loot color constants
@@ -364,55 +377,98 @@ AnimTable
 		; Death
 		!byte f_death,f_death+1,f_death+2,f_death+3
 EnemyAnimTable
-		; SLIME
+		; BAT
 		; Run south
-		!byte f_blob,f_blob+1,f_blob,f_blob+1
+		!byte f_bat,f_bat+1,f_bat,f_bat+1
 		; Run west
-		!byte f_blob,f_blob+1,f_blob,f_blob+1
+		!byte f_bat,f_bat+1,f_bat,f_bat+1
 		; Run north
-		!byte f_blob,f_blob+1,f_blob,f_blob+1
+		!byte f_bat,f_bat+1,f_bat,f_bat+1
 		; Run east
-		!byte f_blob,f_blob+1,f_blob,f_blob+1
+		!byte f_bat,f_bat+1,f_bat,f_bat+1
 		; Death
 		!byte f_death,f_death+1,f_death+2,f_death+3
 
-		; SPIDER
+		; RAT
 		; Run south
-		!byte f_spider,f_spider+1,f_spider,f_spider+1
+		!byte f_rat,f_rat+1,f_rat,f_rat+1
 		; Run west
-		!byte f_spider+2,f_spider+3,f_spider+2,f_spider+3
+		!byte f_rat+2,f_rat+3,f_rat+2,f_rat+3
 		; Run north
-		!byte f_spider+8,f_spider+9,f_spider+8,f_spider+9
+		!byte f_rat+8,f_rat+9,f_rat+8,f_rat+9
 		; Run east
-		!byte f_spider+10,f_spider+11,f_spider+10,f_spider+11
+		!byte f_rat+10,f_rat+11,f_rat+10,f_rat+11
 		; Death
 		!byte f_death,f_death+1,f_death+2,f_death+3
 
-		; SKELETON
+		; RAT BOSS CLAW
 		; Run south
-		!byte f_skeleton,f_skeleton+1,f_skeleton,f_skeleton+2
+		!byte f_rat_boss+18,f_rat_boss+18,f_rat_boss+18,f_rat_boss+18
 		; Run west
-		!byte f_skeleton,f_skeleton+1,f_skeleton,f_skeleton+2
+		!byte f_rat_boss_claw,f_rat_boss_claw,f_rat_boss_claw,f_rat_boss_claw
 		; Run north
-		!byte f_skeleton,f_skeleton+1,f_skeleton,f_skeleton+2
+		!byte f_rat_boss+18,f_rat_boss+18,f_rat_boss+18,f_rat_boss+18
 		; Run east
-		!byte f_skeleton,f_skeleton+1,f_skeleton,f_skeleton+2
+		!byte f_rat_boss+18,f_rat_boss+18,f_rat_boss+18,f_rat_boss+18
 		; Death
 		!byte f_death,f_death+1,f_death+2,f_death+3
 
-		; KNIGHT
-		; Run south
-		!byte f_knight,f_knight+1,f_knight,f_knight+1
-		; Run west
-		!byte f_knight+2,f_knight+3,f_knight+2,f_knight+3
-		; Run north
-		!byte f_knight+8,f_knight+9,f_knight+8,f_knight+9
-		; Run east
-		!byte f_knight+10,f_knight+11,f_knight+10,f_knight+11
-		; Death
-		!byte f_death,f_death+1,f_death+2,f_death+3
+		; No enemy, padding 20 bytes
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-NpcImageList	!byte $60,$61
+BossAnimTable
+		; Tile set animations (20 frames) (add 8 to frame number for next boss in table)
+
+		; RAT BOSS
+		; Idle frames
+		!byte 0, 1, 0, 1
+		; Attack frames
+		!byte 0, 2, 0, 2
+		; Move frames
+		!byte 0, 1, 0, 1
+		; Hide frames
+		!byte 3, 0, 3, 0
+		; Death frames
+		!byte 4, 5, 6, 7
+
+		; No boss, padding 20 bytes
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+BossFrames2x2
+		; BOSS 2x2 frame sprite sets (8 x 2x2 sprites), 32 bytes
+
+		; Frame 0 tile set
+		!byte f_rat_boss,f_rat_boss+1,f_rat_boss+8,f_rat_boss+9
+
+		; Frame 1 tile set
+		!byte f_rat_boss+2,f_rat_boss+1,f_rat_boss+8,f_rat_boss+9
+
+		; Frame 2 tile set
+		!byte f_rat_boss+2,f_rat_boss+3,f_rat_boss+10,f_rat_boss+11
+
+		; Frame 3 tile set
+		!byte f_rat_boss+18,f_rat_boss+18,f_rat_boss+18,f_rat_boss+18
+
+		; Frame 4 tiles set
+		!byte f_death,f_death,f_death,f_death
+
+		; Frame 5 tiles set
+		!byte f_death+1,f_death+1,f_death+1,f_death+1
+
+		; Frame 6 tiles set
+		!byte f_death+2,f_death+2,f_death+2,f_death+2
+
+		; Frame 7 tiles set
+		!byte f_death+3,f_death+3,f_death+3,f_death+3
+
+BossFrames2x3
+		; BOSS 2x3 frame sprites (2 extra sprites per frame, lowest row) (8 x 2x3 sprites), 16 bytes
+
+		; Padding 16 bytes (no boss frames)
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+		; man, boy, woman, girl
+NpcImageList	!byte f_man,f_boy,f_woman,f_girl
 
 
 ; hp array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
@@ -492,3 +548,22 @@ collision_map	!byte $02,$00,$00,$00,$00,$00,$00,$00
 		!byte $00,$00,$00,$00,$00,$00,$02,$02
 
 d0tables_end
+
+		; Enemy API
+		*=$e700
+enemy_api
+		; call a subroutine based on register A value
+		cmp #0
+		beq enemy_move
+		cmp #1
+		beq enemy_check_collision
+		; else enemy_check_collision_player
+
+enemy_check_collision_player
+		rts
+
+enemy_check_collision
+		rts
+
+enemy_move
+		rts

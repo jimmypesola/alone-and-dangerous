@@ -5,35 +5,45 @@
 ; ----------------------
 ;  Enemy frame constants
 ; ----------------------
-f_death 	= $60
-f_blob 		= $92
-f_spider	= $98
-f_skeleton	= $a8
-f_knight	= $b8
-f_bat 		= $92
-f_rat		= $98
+f_base		= 64
+f_death 	= f_base + 32
+f_blob 		= f_base + 82
+f_spider	= f_base + 88
+f_skeleton	= f_base + 104
+f_knight	= f_base + 112
+
+; ----------------------
+;  NPC frame constants
+; ----------------------
+f_man 		= f_base + 80
+f_woman		= f_base + 80
+f_boy		= f_base + 81
+f_girl		= f_base + 81
 
 ; ----------------------
 ;  Item frame constants
 ; ----------------------
-f_bow		= $8b
-f_necklace	= $81
-f_shield	= $89
-f_masterkey	= $71
-f_torch		= $72
-f_gauntlet	= $73
-f_raft		= $82
-f_armor		= $83
+f_axe		= f_base + 72
+f_shield	= f_base + 73
+f_sword		= f_base + 74
+f_bow		= f_base + 75
+f_extra_heart	= f_base + 64
+f_necklace	= f_base + 65
+f_raft		= f_base + 66
+f_armor		= f_base + 67
+f_key		= f_base + 48
+f_masterkey	= f_base + 49
+f_torch		= f_base + 50
+f_gauntlet	= f_base + 51
 
 ; ----------------------
 ;  Loot frame constants
 ; ----------------------
-f_nothing	= $00
-f_heart		= $78
-f_gold		= $79
-f_potion	= $7a
-f_arrows	= $7b
-f_sword		= $8a
+f_nothing	= f_base + 35
+f_heart		= f_base + 56
+f_gold		= f_base + 57
+f_potion	= f_base + 58
+f_arrows	= f_base + 59
 
 ; ----------------------
 ;  Loot color constants
@@ -414,7 +424,39 @@ EnemyAnimTable
 		; Death
 		!byte f_death,f_death+1,f_death+2,f_death+3
 
-NpcImageList	!byte $60,$61
+BossAnimTable
+		; Sprite tile set animations (20 frames) (add 8 to frame number for next boss in table)
+
+		; Idle frames
+		!byte 0, 0, 0, 0
+		; Attack frames
+		!byte 0, 0, 0, 0
+		; Move frames
+		!byte 0, 0, 0, 0
+		; Hide frames
+		!byte 0, 0, 0, 0
+		; Death frames
+		!byte 0, 0, 0, 0
+
+		; No boss, padding 20 bytes
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+BossFrames2x2
+		; BOSS 2x2 frame sprite sets (8 x 2x2 sprites), 32 bytes
+
+		; Padding 32 bytes (no boss frames)
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+BossFrames2x3
+		; BOSS 2x3 frame sprite sets (8 x 2x3 sprites), 48 bytes
+
+		; Padding 48 bytes (no boss frames)
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+		; man, boy, woman, girl
+NpcImageList	!byte f_man,f_boy,f_woman,f_girl
 
 
 ; hp array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
@@ -494,3 +536,28 @@ collision_map	!byte $00,$00,$00,$00,$00,$00,$00,$00
 		!byte $00,$00,$00,$00,$00,$00,$02,$02
 
 outdoortables_end
+
+		; Enemy API
+		*=$e700
+; -----------------------------------------------------------
+; enemy_api
+; Parameters
+; x - enemy index
+; a - subroutine
+; -----------------------------------------------------------
+enemy_api
+		; call a subroutine based on register A value
+		cmp #0
+		beq enemy_move
+		cmp #1
+		beq enemy_check_collision
+		; else enemy_check_collision_player
+
+enemy_check_collision_player
+		rts
+
+enemy_check_collision
+		rts
+
+enemy_move
+		rts

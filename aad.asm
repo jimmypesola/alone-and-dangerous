@@ -583,7 +583,7 @@ outdoortables		!pet "odt"
 outdoortables_len
 dungeon_0		!pet "d0"
 dungeon_0_len
-dungeon_0_sprites	!pet "ods"
+dungeon_0_sprites	!pet "d0s"
 dungeon_0_sprites_len
 dungeon_0_charset	!pet "d0c"
 dungeon_0_charset_len
@@ -675,8 +675,8 @@ sprite_name_len_idx	!byte outdoorsprites_len-outdoorsprites, dungeon_0_sprites_l
 			!byte dungeon_5_sprites_len-dungeon_1_sprites, dungeon_6_sprites_len-dungeon_2_sprites
 			!byte dungeon_7_sprites_len-dungeon_1_sprites
 
-sprite_file_end_lb	!byte $85, $85, $85, $85, $85, $85, $85, $85, $85
-sprite_file_end_hb	!byte $59, $59, $59, $59, $59, $59, $59, $59, $59
+sprite_file_end_lb	!byte $90, $ca, $85, $85, $85, $85, $85, $85, $85
+sprite_file_end_hb	!byte $59, $5a, $59, $59, $59, $59, $59, $59, $59
 
 
 charset_name_lb_idx	!byte <outdoorcharset, <dungeon_0_charset, <dungeon_1_charset
@@ -712,8 +712,6 @@ tables_name_len_idx	!byte outdoortables_len-outdoortables, dungeon_0_tables_len-
 
 tables_file_end_lb	!byte $44, $df, $e1, $e1, $e1, $e1, $e1, $e1, $e1
 tables_file_end_hb	!byte $a3, $a1, $4c, $4c, $4c, $4c, $4c, $4c, $4c
-
-			;              D   U   N   G   E   O   N       X
 
 			;              D   U   N   G   E   O   N       X
 dungeon_name		!byte $c0,$c0,$c4,$d5,$ce,$c7,$c5,$cf,$ce,$c0,$db,$c0,$c0
@@ -6480,7 +6478,7 @@ chardata
 		; Sprites from $5000-$6fff ; 128*64 bytes sprites
 		*=$5000
 spritedata
-		!binary "sprites_2.bin"	; 128 unpacked sprite entries, will add up to 128 packed sprite entries (32 bytes * 128 = 4096 = 4k) at $e000-$efff
+		!binary "aad_sprites_outdoor.bin"	; 128 unpacked sprite entries, will add up to 128 packed sprite entries (32 bytes * 128 = 4096 = 4k) at $e000-$efff
 
 		; Ends at $6fff
 
@@ -7615,6 +7613,10 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 ; ------------------------------------------------------------------------------------
 ;  ctrl_enemy
 ;  This is some enemy AI code
+;  Destroys registers: a, x, y
+;  x = number of mobs, mob index
+;  a = working register, calculation & comparison
+;  y = used in subroutines for various tasks
 ; ------------------------------------------------------------------------------------
 ctrl_enemy
 		ldx MobsPresent
