@@ -45,7 +45,7 @@ enemy_dir
 CurrentRoomIdx	!byte $00	; 1-byte room index on map
 
 ; 16-bit mob data currently on screen
-CurrentMobType	!byte $00,$00,$00,$00,$00,$00,$00,$00,$00	; list of up to 9 bytes
+CurrentMobTypes	!byte $00,$00,$00,$00,$00,$00,$00,$00,$00	; list of up to 9 bytes
 MobSrc		!word $0000	; 2-byte address where mob data is fetched
 
 ;-----------------------------------------------------------
@@ -203,15 +203,18 @@ plr_r_last_tileidx
 		!byte $00
 
 ; --------------------------------------------
-; Player's start location position arrays.
+; Player's start location position arrays per map
 ; --------------------------------------------
+; player's starting pos in tiles
 StartLocX	!byte 8,30,0,0,0,0,0,0
 StartLocY	!byte 91,34,0,0,0,0,0,0
 
+; screen starting pos (left corner) in tiles
 MapStartX	!byte 0,20,0,0,0,0,0,0
 MapStartHiX	!byte 0,0,0,0,0,0,0,0
 MapStartY	!byte 84,24,0,0,0,0,0,0
 
+; screen graphics colors per map
 BorderColor	!byte 0,0,0,0,0,0,0,0
 BGColor		!byte 9,0,0,0,0,0,0,0
 MultiColor1	!byte 15,12,0,0,0,0,0,0
@@ -281,6 +284,71 @@ pc_target_list_d7
 		!byte $ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff
 
+; These tables below are for animating loot "jumping" out of a chest when opened.
+; - Formula for this is: let f = frame index; sprite_y = sprite_y + move_table[f] - sine_table[f]
+; - Sine table can have more uses, like rotating movement simulation, or bouncing effect. Max offsets are exactly 1 tile vertically or horizontally, in both arrays.
+
+sine_table	; 50 bytes sine table
+		!byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$09,$0a,$0b,$0c,$0c,$0d
+		!byte $0e,$0e,$0e,$0f,$0f,$0f,$10,$10,$10,$10,$10,$10,$10,$0f,$0f,$0f
+		!byte $0e,$0e,$0e,$0d,$0c,$0c,$0b,$0a,$09,$09,$08,$07,$06,$05,$04,$03
+		!byte $02,$01
+
+move_table	; 50 bytes move south table
+		!byte $00,$00,$00,$00,$00,$01,$01,$01,$02,$02,$02,$03,$03,$03,$04,$04
+		!byte $04,$05,$05,$05,$06,$06,$06,$07,$07,$07,$08,$08,$08,$09,$09,$09
+		!byte $0a,$0a,$0a,$0b,$0b,$0c,$0c,$0c,$0d,$0d,$0d,$0e,$0e,$0e,$0f,$0f
+		!byte $0f,$0f
+
+num_dirs_table	!byte $03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03
+		!byte $03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03
+		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+
+fadeout_colors_bg_border
+		!byte $00,$00,$00,$00,$09,$09,$09,$09
+fadeout_colors_extra_color1
+		!byte $09,$09,$0b,$0b,$0c,$0c,$0f,$0f
+fadeout_colors_extra_color2
+		!byte $09,$09,$09,$09,$0b,$0b,$0b,$0b
+gradient_fader
+		!byte $00,$07,$04,$06,$06,$06,$00,$05
+		!byte $08,$0f,$0c,$0e,$0e,$0e,$08,$0d
+damage_flash
+		!byte $07,$07,$02,$02
+
+boss_loc_array	; Each world/dungeon has up to two bosses. This array defines room and tile position of each boss.
+		; It is checked each time a room is entered, and the location matches the room position and position within the room (2nd byte).
+		; When a boss is defeated, its position shall be set to $ff permanently so it won't appear again.
+		;    Room,Tile		  Map
+		!byte $ff,$ff,$ff,$ff	; outdoor world
+		!byte $02,$30,$ff,$ff	; dungeon 0
+		!byte $ff,$ff,$ff,$ff	; dungeon 1
+		!byte $ff,$ff,$ff,$ff	; dungeon 2
+		!byte $ff,$ff,$ff,$ff	; dungeon 3
+		!byte $ff,$ff,$ff,$ff	; dungeon 4
+		!byte $ff,$ff,$ff,$ff	; dungeon 5
+		!byte $ff,$ff,$ff,$ff	; dungeon 6
+		!byte $ff,$ff,$ff,$ff	; dungeon 7
+
+
+; -------------------------------
+;  Text characters locations + 
+;  symbol codes per map
+; -------------------------------
+txt_sp = 32
+txt_start = 1
+num_start = 48
+txt_heart = 36
+txt_key = 37
+txt_coin = 38
+txt_slash = 39
+; -------------------------------
 
 
 

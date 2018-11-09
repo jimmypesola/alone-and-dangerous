@@ -25,8 +25,8 @@ f_girl		= f_base + 121
 ;  Item frame constants
 ; ----------------------
 f_axe		= f_base + 72
-f_shield	= f_base + 73
-f_sword		= f_base + 74
+f_sword		= f_base + 73
+f_shield	= f_base + 74
 f_bow		= f_base + 75
 f_extra_heart	= f_base + 64
 f_necklace	= f_base + 65
@@ -42,11 +42,12 @@ f_gauntlet	= f_base + 51
 ; ----------------------
 ;  Loot frame constants
 ; ----------------------
-f_nothing	= $00
-f_heart		= $78
-f_gold		= $79
-f_potion	= $7a
-f_arrows	= $7b
+f_nothing	= f_base + 35
+f_heart		= f_base + 56
+f_gold		= f_base + 57
+f_potion	= f_base + 58
+f_arrows	= f_base + 59
+f_sword		= f_base + 73
 
 ; ----------------------
 ;  Loot color constants
@@ -93,6 +94,8 @@ ct_cenotaph	= 10	; cenotaph  - a grave, can spawn zombies/skeletons or other mon
 ct_switch	= 11	; switch    - when interacted with it toggles its state, and can change other tiles.
 
 
+
+;---------------------------------------------------------------------------------------------------------
 ; Dungeon 0 map specific data
 		*=$e000		; will be loaded here
 
@@ -259,8 +262,10 @@ mobs_entries
 ;          d - spider   (orange - extreme)
 ;          e - skeleton (orange - extreme)
 ;          f - knight   (orange - extreme)
-;         10 - free
-;         80 - NPC 0    (key giver for first "sword" chest)
+;         10 - bat	(free moving all directions)
+;         40 - Boss     (rat boss)
+;         41 - Boss     (Knight boss)
+;         80 - NPC 0    (A NPC, salesman?)
 ; $00
 grp_nothing
 		!byte $00		; empty room
@@ -308,6 +313,12 @@ grp_1x_npc_0	!byte $01,$80,$01
 ; $0e
 grp_2x_rat	!byte $01,$01,$02
 
+; $0f
+grp_6x_bats	!byte $01,$20,$06
+
+; $40
+grp_1x_ratboss	!byte $01,$40,$01
+
 
 
 mobs_entries_list	; room for enemy configurations
@@ -321,12 +332,12 @@ mobs_entries_list	; room for enemy configurations
 ; Level data constants (occupies $d0 bytes = 208 bytes)
 ;-----------------------------------------------------------
 world
-		; mobs_entries references
+		; mobs_entries references, see mobs_entries table above. (not mob_entries_list)
 
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
 		!byte $0e,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
-		!byte $0e,$00,$0a,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
+		!byte $0e,$00,$0f,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
@@ -497,34 +508,21 @@ mobtable_speed	!byte $01,$02,$01,$01,$01,$02,$02,$02
 
 ; mob colors
 mob_fill_table
-		!byte $05,$01,$00,$0f,$0e,$01,$00,$0e
+		!byte $06,$0b,$00,$0f,$0e,$01,$00,$0e
 		!byte $0a,$01,$00,$04,$07,$01,$00,$08
 mob_contour_table
-		!byte $0d,$00,$01,$00,$06,$06,$03,$00
+		!byte $00,$00,$01,$00,$06,$06,$03,$00
 		!byte $04,$04,$04,$00,$08,$08,$08,$00
 npc_fill_table
 		!byte $05,$0e
 npc_contour_table
 		!byte $00,$00
-
-damage_flash
-		!byte $07,$07,$02,$02
 loot_list
 		!byte f_nothing,f_heart,f_gold,f_potion
 loot_colors_fill
 		!byte col_f_nothing,col_f_heart,col_f_gold,col_f_potion
 loot_colors_contour
 		!byte col_c_nothing,col_c_heart,col_c_gold,col_c_potion
-
-fadeout_colors_bg_border
-		!byte $00,$00,$00,$00,$09,$09,$09,$09
-fadeout_colors_extra_color1
-		!byte $09,$09,$0b,$0b,$0c,$0c,$0f,$0f
-fadeout_colors_extra_color2
-		!byte $09,$09,$09,$09,$0b,$0b,$0b,$0b
-gradient_fader
-		!byte $00,$07,$04,$06,$06,$06,$00,$05
-		!byte $08,$0f,$0c,$0e,$0e,$0e,$08,$0d
 
 		; Collision type for each tile type
 		; 1 = door
@@ -549,21 +547,3 @@ collision_map	!byte $02,$00,$00,$00,$00,$00,$00,$00
 
 d0tables_end
 
-		; Enemy API
-		*=$e700
-enemy_api
-		; call a subroutine based on register A value
-		cmp #0
-		beq enemy_move
-		cmp #1
-		beq enemy_check_collision
-		; else enemy_check_collision_player
-
-enemy_check_collision_player
-		rts
-
-enemy_check_collision
-		rts
-
-enemy_move
-		rts

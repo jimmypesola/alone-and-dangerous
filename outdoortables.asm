@@ -24,8 +24,8 @@ f_girl		= f_base + 81
 ;  Item frame constants
 ; ----------------------
 f_axe		= f_base + 72
-f_shield	= f_base + 73
-f_sword		= f_base + 74
+f_sword		= f_base + 73
+f_shield	= f_base + 74
 f_bow		= f_base + 75
 f_extra_heart	= f_base + 64
 f_necklace	= f_base + 65
@@ -44,6 +44,7 @@ f_heart		= f_base + 56
 f_gold		= f_base + 57
 f_potion	= f_base + 58
 f_arrows	= f_base + 59
+f_sword		= f_base + 73
 
 ; ----------------------
 ;  Loot color constants
@@ -90,6 +91,8 @@ ct_cenotaph	= 10	; cenotaph  - a grave, can spawn zombies/skeletons or other mon
 ct_switch	= 11	; switch    - when interacted with it toggles its state, and can change other tiles.
 
 
+
+;---------------------------------------------------------------------------------------------------------
 ; Outdoor map specific data
 		*=$e000		; will be loaded here
 
@@ -241,6 +244,14 @@ loot_triggers
 ; -------------------------------------------------
 
 mobs_entries
+;          each label here is a list (until next label) with 1 header byte:
+;           - header byte:  number of groups
+;           - group 0 byte #0:  enemy type (0-255)
+;           - group 0 byte #1:  quantity in group 0
+;           - group 1 byte #0:  enemy type (0-255)
+;           - group 1 byte #1:  quantity in group 1
+;           - ... etc
+;
 ;          Enemy types:
 ;          0 - slime    (green - easy)
 ;          1 - spider   (green - easy)
@@ -265,7 +276,7 @@ grp_nothing
 		!byte $00		; empty room
 ; $01
 grp_4x_blueknights
-		!byte $01,$07,$04	; # of groups; type (up to 256); qty in group x; type; qty in group x+1; ...
+		!byte $01,$07,$04	; # of groups; type[0]; qty in group[0]; type[1]; qty in group[1]; ...
 ; $02
 grp_4x_blueskellies
 		!byte $01,$06,$04
@@ -306,6 +317,12 @@ grp_1x_npc_0	!byte $01,$80,$01
 
 ; $0e
 grp_2x_rat	!byte $01,$01,$02
+
+; $0f
+grp_6x_bats	!byte $01,$20,$06
+
+; $40
+grp_1x_ratboss	!byte $01,$40,$01
 
 
 
@@ -451,9 +468,8 @@ BossFrames2x2
 BossFrames2x3
 		; BOSS 2x3 frame sprite sets (8 x 2x3 sprites), 48 bytes
 
-		; Padding 48 bytes (no boss frames)
-		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+		; Padding 16 bytes (no boss frames)
+		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 		; man, boy, woman, girl
 NpcImageList	!byte f_man,f_boy,f_woman,f_girl
@@ -494,25 +510,12 @@ npc_fill_table
 		!byte $05,$0e
 npc_contour_table
 		!byte $00,$00
-
-damage_flash
-		!byte $07,$07,$02,$02
 loot_list
 		!byte f_nothing,f_heart,f_gold,f_potion
 loot_colors_fill
 		!byte col_f_nothing,col_f_heart,col_f_gold,col_f_potion
 loot_colors_contour
 		!byte col_c_nothing,col_c_heart,col_c_gold,col_c_potion
-
-fadeout_colors_bg_border
-		!byte $00,$00,$00,$00,$09,$09,$09,$09
-fadeout_colors_extra_color1
-		!byte $09,$09,$0b,$0b,$0c,$0c,$0f,$0f
-fadeout_colors_extra_color2
-		!byte $09,$09,$09,$09,$0b,$0b,$0b,$0b
-gradient_fader
-		!byte $00,$07,$04,$06,$06,$06,$00,$05
-		!byte $08,$0f,$0c,$0e,$0e,$0e,$08,$0d
 
 		; Collision type for each tile type
 		; 1 = door
@@ -537,27 +540,3 @@ collision_map	!byte $00,$00,$00,$00,$00,$00,$00,$00
 
 outdoortables_end
 
-		; Enemy API
-		*=$e700
-; -----------------------------------------------------------
-; enemy_api
-; Parameters
-; x - enemy index
-; a - subroutine
-; -----------------------------------------------------------
-enemy_api
-		; call a subroutine based on register A value
-		cmp #0
-		beq enemy_move
-		cmp #1
-		beq enemy_check_collision
-		; else enemy_check_collision_player
-
-enemy_check_collision_player
-		rts
-
-enemy_check_collision
-		rts
-
-enemy_move
-		rts

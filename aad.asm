@@ -26,7 +26,7 @@
 ;	                               Outdoor map is 16x13 (=208) "rooms" with interiors included, 16x8 with interiors excluded.
 ;
 ;	CODE #3:
-;	$c000-$cfff -> 4096 bytes --- code routines   
+;	$c000-$cfff -> 4096 bytes --- code routines
 ;
 ;	$e000-$efff -> 4096 bytes --- Compressed sprite data.
 ;	$f000-$f5ff -> 1536 bytes --- Tables and game data (prel.)
@@ -41,10 +41,10 @@
 ; TODO: Make bosses
 
 
-; Strategy: 
+; Strategy:
 ; 1. Create a loader, rle compressed data. Load two bytes, then unpack.
 ; 2. Configure memory, switch in RAM at BASIC ROM ($a000-$bfff).
-; 3. Load compressed map data to $7000-$bfff, load 2 maps: main map 1 and interiors map 1. 
+; 3. Load compressed map data to $7000-$bfff, load 2 maps: main map 1 and interiors map 1.
 ;    in that order, and place both as near the end of that RAM area as possible.
 ; 4. Unpack map to beginning of $7000, then the interiors map directly after it.
 
@@ -57,7 +57,7 @@
 
 
 ; shift in RAM at Kernal ROM ($e000-$ffff)
-; 
+;
 
 offx=$bc	; map x screen offset (from top left corner) (rough scroll, 16 pixels)
 offy=$be	; map y screen offset (from top left corner)
@@ -94,13 +94,13 @@ player_inv = $10	; %00000000 00000001	; Sword			- First weapon, melee
 			; %00000000 00010000	; Torch			- Allows vision in the dark
 			; %00000000 00100000	; Magic Glove		- Gives a giant's strength, can lift rocks
 			;						  (enables level 1 spells)
-			; %00000000 01000000	; Raft			- Can travel over water 
-			; %00000000 10000000	; Armor			- Doubles health 
+			; %00000000 01000000	; Raft			- Can travel over water
+			; %00000000 10000000	; Armor			- Doubles health
 			; %00000001 00000000	; Magic Necklace	- Enables level 2 spells
-			; %00000010 00000000	; Red potion		- Restore health 
+			; %00000010 00000000	; Red potion		- Restore health
 			; %00000100 00000000	; Blue potion		- 1 spell charge
 			; %00001000 00000000	; Green potion		- 2 spell charges
-			; %00001100 00000000	; Yellow potion		- 3 spell charges 
+			; %00001100 00000000	; Yellow potion		- 3 spell charges
 			; %11110000 00000000	; Key			- 0-15 keys
 
 players_spells = $12	; %00000001	- Spell 1	- Cast spell ??
@@ -124,7 +124,7 @@ vspr_counter = $17
 
 PlayerBusyTimer = $18
 
-RandomNumber = $19
+;RandomNumber = $19	- TODO: free variable!
 RandomIdx = $1a
 
 xdif = $1b
@@ -156,7 +156,7 @@ PlayerWeaponPower = $29	; bits 0-2 - sword type 0-7 (can do up to 7pts damage)
 
 indextable=$30	; sprite multiplexer indices: must have at least 16 entries, but reserve 32
 
-DictLen = 288	; Room dictionary length (back reference to rooms "already seen", i.e. 
+DictLen = 288	; Room dictionary length (back reference to rooms "already seen", i.e.
 		; compression for rooms which data are identical.)
 
 ; Keyscanner ZERO PAGE Variables
@@ -193,7 +193,7 @@ PlayerPowerState = $5b
 AnimCounter = $5f	; For each sprite
 
 KeyStopper = $60	; KeyStopper, when a key is held down to prevent repetition.
-RandomPos = $61
+RandomDir = $61
 
 ; Player animation state variable and values
 PlayerAnimState = $62 ; NOTE: used with above AnimCounter (index 2 in sprite anim table)
@@ -223,11 +223,18 @@ Arrows = $82			; Number of arrows, 1 byte.
 
 WeaponList = $83
 WeaponListLen = $86
-SelWeapon = $87			; Selected weapon idx: 0=None, 1=Sword, 2=Axe, 4=Bow
+SelWeapon = $87			; Selected weapon idx: 0=None, 1=Sword, 2=Axe, 3=Bow
 
 ; Free bytes here!
 
 linebuffer=$90 ; 40 bytes, ends in $b7
+
+FrameStarted=$c0
+
+
+CurrentMobType=$c1
+CurrentEnemyDir=$c2
+FinalEnemyAnimState=$c3
 
 ; ----------------------
 ; Scroll state values
@@ -244,7 +251,7 @@ state_scroll_right = 4
 ; ----------------------
 player = 0 	; (in indexes 0-15)
 weapon = 1
-enemy = 2 
+enemy = 2
 
 max_enemies = 6
 items = 16
@@ -299,6 +306,10 @@ EnemyRunSouth = 0
 EnemyRunWest = 1
 EnemyRunNorth = 2
 EnemyRunEast = 3
+EnemyRunSouthWest = 4
+EnemyRunNorthWest = 5
+EnemyRunNorthEast = 6
+EnemyRunSouthEast = 7
 EnemyDyingAnim = 4
 
 ; ----------------------
@@ -313,7 +324,8 @@ EnemyHit = 4
 EnemyDying = 5
 EnemyDead = 6
 EnemyLoot = 7
-EnemyIsNpc = 8
+EnemyLootVolley = 8
+EnemyIsNpc = 9
 
 ; ----------------------
 ; Player "Power" state,
@@ -357,7 +369,7 @@ c_right		= 3
 ;------------------------------------------------------------------------------------
 
 ; PLAYER/ENEMY DATA TABLES
-;player_max_hp 	=	$f000	;!byte $00,$06	; store as strings, for efficiency 
+;player_max_hp 	=	$f000	;!byte $00,$06	; store as strings, for efficiency
 ;player_hp 	=	$f002	;!byte $00,$06			; bcd string
 ;player_level 	=	$f004	;!byte $00,$01			; bcd string
 ;player_gold	=	$f006	;!byte $00,$00,$00,$00,$00	; bcd string
@@ -376,7 +388,7 @@ c_right		= 3
 ;CurrentRoomIdx =	$f063	; 1-byte room index on map
 ;
 ;; 16-bit mob data currently on screen
-;CurrentMobType = 	$f064	; list of up to 9 bytes
+;CurrentMobTypes = 	$f064	; list of up to 9 bytes
 ;MobSrc =		$f06c	; 2-byte address where mob data is fetched
 ;
 ;-----------------------------------------------------------
@@ -646,6 +658,24 @@ dungeon_7_charset_len
 dungeon_7_tables	!pet "d7t"
 dungeon_7_tables_len
 
+tables_name_lb_idx	!byte <outdoortables, <dungeon_0_tables, <dungeon_1_tables
+			!byte <dungeon_2_tables, <dungeon_3_tables, <dungeon_4_tables
+			!byte <dungeon_5_tables, <dungeon_6_tables, <dungeon_7_tables
+
+tables_name_hb_idx	!byte >outdoortables, >dungeon_0_tables, >dungeon_1_tables
+			!byte >dungeon_2_tables, >dungeon_3_tables, >dungeon_4_tables
+			!byte >dungeon_5_tables, >dungeon_6_tables, >dungeon_7_tables
+
+tables_name_len_idx	!byte outdoortables_len-outdoortables, dungeon_0_tables_len-dungeon_0_tables
+			!byte dungeon_1_tables_len-dungeon_1_tables, dungeon_2_tables_len-dungeon_2_tables
+			!byte dungeon_3_tables_len-dungeon_3_tables, dungeon_4_tables_len-dungeon_4_tables
+			!byte dungeon_5_tables_len-dungeon_5_tables, dungeon_6_tables_len-dungeon_6_tables
+			!byte dungeon_7_tables_len-dungeon_7_tables
+
+tables_file_end_lb	!byte $34, $df, $e1, $e1, $e1, $e1, $e1, $e1, $e1
+tables_file_end_hb	!byte $a3, $a1, $4c, $4c, $4c, $4c, $4c, $4c, $4c
+
+
 map_name_lb_idx		!byte <outdoorworld,<dungeon_0,<dungeon_1,<dungeon_2,<dungeon_3
 			!byte <dungeon_4,<dungeon_5,<dungeon_6,<dungeon_7
 
@@ -658,7 +688,7 @@ map_name_len_idx	!byte outdoorworld_len-outdoorworld
 			!byte dungeon_4_len-dungeon_4, dungeon_5_len-dungeon_5
 			!byte dungeon_6_len-dungeon_6, dungeon_7_len-dungeon_7
 
-map_file_end_lb		!byte $48, $70, $ec, $ec, $ec, $ec, $ec, $ec, $ec
+map_file_end_lb		!byte $4f, $63, $ec, $ec, $ec, $ec, $ec, $ec, $ec
 map_file_end_hb		!byte $6d, $54, $6c, $6c, $6c, $6c, $6c, $6c, $6c
 
 sprite_name_lb_idx	!byte <outdoorsprites, <dungeon_0_sprites, <dungeon_1_sprites
@@ -675,7 +705,7 @@ sprite_name_len_idx	!byte outdoorsprites_len-outdoorsprites, dungeon_0_sprites_l
 			!byte dungeon_5_sprites_len-dungeon_1_sprites, dungeon_6_sprites_len-dungeon_2_sprites
 			!byte dungeon_7_sprites_len-dungeon_1_sprites
 
-sprite_file_end_lb	!byte $90, $ca, $85, $85, $85, $85, $85, $85, $85
+sprite_file_end_lb	!byte $93, $b4, $85, $85, $85, $85, $85, $85, $85
 sprite_file_end_hb	!byte $59, $5a, $59, $59, $59, $59, $59, $59, $59
 
 
@@ -693,32 +723,12 @@ charset_name_len_idx	!byte outdoorcharset_len-outdoorcharset, dungeon_0_charset_
 			!byte dungeon_5_charset_len-dungeon_1_charset, dungeon_6_charset_len-dungeon_2_charset
 			!byte dungeon_7_charset_len-dungeon_1_charset
 
-charset_file_end_lb	!byte $e1, $5a, $e1, $e1, $e1, $e1, $e1, $e1, $e1
+charset_file_end_lb	!byte $e3, $56, $e1, $e1, $e1, $e1, $e1, $e1, $e1
 charset_file_end_hb	!byte $4c, $4c, $4c, $4c, $4c, $4c, $4c, $4c, $4c
 
-tables_name_lb_idx	!byte <outdoortables, <dungeon_0_tables, <dungeon_1_tables
-			!byte <dungeon_2_tables, <dungeon_3_tables, <dungeon_4_tables
-			!byte <dungeon_5_tables, <dungeon_6_tables, <dungeon_7_tables
-
-tables_name_hb_idx	!byte >outdoortables, >dungeon_0_tables, >dungeon_1_tables
-			!byte >dungeon_2_tables, >dungeon_3_tables, >dungeon_4_tables
-			!byte >dungeon_5_tables, >dungeon_6_tables, >dungeon_7_tables
-
-tables_name_len_idx	!byte outdoortables_len-outdoortables, dungeon_0_tables_len-dungeon_0_tables
-			!byte dungeon_1_tables_len-dungeon_1_tables, dungeon_2_tables_len-dungeon_2_tables
-			!byte dungeon_3_tables_len-dungeon_3_tables, dungeon_4_tables_len-dungeon_4_tables
-			!byte dungeon_5_tables_len-dungeon_5_tables, dungeon_6_tables_len-dungeon_6_tables
-			!byte dungeon_7_tables_len-dungeon_7_tables
-
-tables_file_end_lb	!byte $44, $df, $e1, $e1, $e1, $e1, $e1, $e1, $e1
-tables_file_end_hb	!byte $a3, $a1, $4c, $4c, $4c, $4c, $4c, $4c, $4c
-
-			;              D   U   N   G   E   O   N       X
-dungeon_name		!byte $c0,$c0,$c4,$d5,$ce,$c7,$c5,$cf,$ce,$c0,$db,$c0,$c0
-			;                  S   E   W   E   R   S
-rat_dungeon_name	!byte $c0,$c0,$c0,$d3,$c5,$d7,$c5,$d2,$d3,$c0,$c0,$c0,$c0
-			;              O   V   E   R   W   O   R   L   D
-overworld_name		!byte $c0,$c0,$cf,$d6,$c5,$d2,$d7,$cf,$d2,$cc,$c4,$c0,$c0
+dungeon_name		!scr "  dungeon @  "
+rat_dungeon_name	!scr "   sewers    "
+overworld_name		!scr "  overworld  "
 
 dungeon_names_lo	!byte <overworld_name, <dungeon_name, <dungeon_name, <dungeon_name, <dungeon_name, <dungeon_name
 			!byte <dungeon_name, <dungeon_name, <dungeon_name
@@ -733,7 +743,13 @@ scrollirq
 		sta areg
 		stx xreg
 		sty yreg
-		jsr $2003
+		inc FrameStarted
+		jsr $2003	; TODO: Create overlapping IRQ to play music always at raster 0,
+				; then rti again back to scrollirq after finishing music player processing.
+
+				; TODO: Bug during scrolling in dungeon 0 for some reason.
+				; wrong color chosen on some tiles. Tile compression via CharPad 
+				; must be the reason. Find a fix for it... happens only on upwards scroll.
 
 		; Scroll state jump table
 		lda scrollstate
@@ -772,11 +788,12 @@ scrollStateLeft
 		cmp #1
 		bne +
 			; scroll finished
+			sei
 			lda #state_idle
 			sta scrollstate
 			lda #(62)
 			sta xtablelo+player
-			lda #1 
+			lda #1
 			sta xtablehi+player
 			jsr copy_screen
 			jsr setup_enemies
@@ -799,17 +816,19 @@ scrollStateRight
 		lda scroll_x2
 		cmp #0
 		bne +
-		
+
 			; scroll finished
+			sei
 			lda #state_idle
 			sta scrollstate
 			lda #(26)
 			sta xtablelo+player
-			lda #0 
+			lda #0
 			sta xtablehi+player
 			jsr copy_screen
 			jsr setup_enemies
 			jsr draw_stats
+			cli
 			jmp scrollEnd
 +
 		jmp scrollEnd
@@ -823,6 +842,7 @@ scrollStateUp
 		cmp #192
 		bne +
 			; scroll finished
+			sei
 			lda #state_idle
 			sta scrollstate
 			lda #(216)
@@ -830,8 +850,9 @@ scrollStateUp
 			jsr copy_screen
 			jsr setup_enemies
 			jsr draw_stats
+			cli
 			jmp scrollEnd
-		
+
 +		jsr move_screen_up
 		jmp scrollEnd
 
@@ -844,6 +865,7 @@ scrollStateDown
 		cmp #4
 		bne +
 			; scroll finished
+			sei
 			lda #state_idle
 			sta scrollstate
 			lda #(54)
@@ -851,6 +873,7 @@ scrollStateDown
 			jsr copy_screen
 			jsr setup_enemies
 			jsr draw_stats
+			cli
 			jmp scrollEnd
 +
 		jmp scrollEnd
@@ -860,36 +883,11 @@ scrollStateDown
 ;---------------------------------------
 scrollEnd
 
-		asl $d019
 		lda $d011
 		and #$1f
 		sta $d011
 
-		lda $d012
-		cmp #$f2
-		; if raster line is less than 242, then set interrupt!
-		bcs +
-			lda #$f2
-			sta $d012
-
-			lda #<statusline	; so, set raster interrupt at next sprite 0 y coordinate.
-			sta $fffe
-			lda #>statusline
-			sta $ffff
-
-			inc $d019	; acknowledge raster irq.
-			lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
-			jmp ++
-+		; else
-
-			lda #<scrollirq
-			sta $fffe
-			lda #>scrollirq
-			sta $ffff
-
-			lda #$00	; Set main interrupt to happen at line 32
-			sta $d012
-++
+		inc $d019	; acknowledge raster irq.
 		lda areg
 		ldx xreg
 		ldy yreg
@@ -934,13 +932,10 @@ player_read_controls
 		sta ytable+weapon
 
 		jsr read_keyboard
-		
-		lda ScanResult
-		bne +	
-			; No keys are pressed so Player is standing
 
-			ldx #0
-			stx plr_r_ctrl_dir
+		lda ScanResult
+		bne +
+			; No keys are pressed so Player is standing
 
 			lda PlayerAnimState
 			and #3 ; Get direction no matter which state
@@ -961,6 +956,8 @@ player_read_controls
 			; Check if possible to move
 			ldx #player
 			jsr get_tile_left_of_sprite
+			stx plr_r_last_tilepos
+			sta plr_r_last_tileidx
 
 			ldx #PlayerRunWest
 			stx PlayerAnimState
@@ -987,6 +984,8 @@ player_read_controls
 			; Check if possible to move
 			ldx #player
 			jsr get_tile_right_of_sprite
+			stx plr_r_last_tilepos
+			sta plr_r_last_tileidx
 
 			ldx #PlayerRunEast
 			stx PlayerAnimState
@@ -1013,6 +1012,8 @@ player_read_controls
 			; Check if possible to move
 			ldx #player
 			jsr get_tile_above_sprite
+			stx plr_r_last_tilepos
+			sta plr_r_last_tileidx
 
 			ldx #PlayerRunNorth
 			stx PlayerAnimState
@@ -1040,6 +1041,8 @@ player_read_controls
 			ldx #0
 			ldx #player
 			jsr get_tile_below_sprite
+			stx plr_r_last_tilepos
+			sta plr_r_last_tileidx
 
 			ldx #PlayerRunSouth
 			stx PlayerAnimState
@@ -1114,7 +1117,9 @@ player_read_controls
 					lda plr_r_last_tilepos
 					sta tmp_switch_loc
 
-					; set loot timer
+					; set switch timer
+					lda #100
+					sta PlayerBusyTimer
 					lda #PlayerStatePullSwitch
 					sta PlayerState
 					jmp ++++
@@ -1126,7 +1131,9 @@ player_read_controls
 					lda plr_r_last_tilepos
 					sta tmp_switch_loc
 
-					; set loot timer
+					; set switch timer
+					lda #100
+					sta PlayerBusyTimer
 					lda #PlayerStatePullSwitch
 					sta PlayerState
 					jmp ++++
@@ -1147,7 +1154,6 @@ player_read_controls
 
 					jsr player_start_attack
 
-					;ldx #0	; this is used as return value, must be 0 or weird things WILL happen!
 					jmp ++++
 +++
 		; Reset keystopper
@@ -1184,19 +1190,18 @@ select_next_weapon
 		sta SelWeapon
 		rts
 
+
+
 ; get_tile_left_of_sprite (spriteX-1)/16
 ; Destroys:	x, y, a
 ; Parameters: 	x - sprite index
 ; Return value: a - Tile ID
+;               x - Tile pos
 get_tile_left_of_sprite
 
-		ldy #xoffset
-		iny		; this will make the check happen 1 pixel to the left of the sprite origin.
-		sty tmp
 		lda xtablelo,x
-
 		sec
-		sbc tmp		; first remove the xoffset: spriteX = (spriteX - offx - 1)
+		sbc #xoffset+1	; remove the xoffset: spriteX = (spriteX - offx - 1)
 		sta tmp
 		lda xtablehi,x	; get sprite MSB
 		sbc #0
@@ -1216,9 +1221,7 @@ get_tile_left_of_sprite
 
 		lda ytable,x
 		sec
-		sbc #yoffset	; first remove the yoffset
-		clc
-		adc #8		; check preferably from the center of the sprite
+		sbc #yoffset-8	; remove the yoffset, but compensate for the sprite center
 		lsr
 		lsr
 		lsr
@@ -1230,27 +1233,22 @@ get_tile_left_of_sprite
 		adc tmp
 		tax
 		lda tilebuffer,x
-		stx plr_r_last_tilepos
-		sta plr_r_last_tileidx
 		rts
 
 ; get_tile_right_of_sprite
 ; Destroys:	x, y, a
 ; Parameters: 	x - sprite index
 ; Return value: a - Tile ID
+;               x - Tile pos
 get_tile_right_of_sprite
 
-		lda #xoffset
-		sec
-		sbc #16
-		sta tmp
 		lda xtablelo,x
 		sec
-		sbc tmp		; first remove the xoffset
+		sbc #xoffset-16	; first remove the xoffset-16
 		sta tmp
 		lda xtablehi,x
 		sbc #0
-		lsr		; sets carry if bit 0 = 1	
+		lsr		; sets carry if bit 0 = 1
 		lda tmp
 		ror		; bring in carry
 		lsr
@@ -1260,9 +1258,7 @@ get_tile_right_of_sprite
 
 		lda ytable,x
 		sec
-		sbc #yoffset	; first remove the yoffset
-		clc
-		adc #8
+		sbc #yoffset-8	; remove the yoffset, but compensate for sprite center
 		lsr
 		lsr
 		lsr
@@ -1274,23 +1270,18 @@ get_tile_right_of_sprite
 		adc tmp
 		tax
 		lda tilebuffer,x
-		stx plr_r_last_tilepos
-		sta plr_r_last_tileidx
 		rts
 
 ; get_tile_above_sprite
 ; Destroys:	x, y, a
 ; Parameters: 	x - sprite index
 ; Return value: a - Tile ID
+;               x - Tile pos
 get_tile_above_sprite
 
-		lda #xoffset
-		sec
-		sbc #8
-		sta tmp
 		lda xtablelo,x
 		sec
-		sbc tmp		; first remove the xoffset
+		sbc #xoffset-8	; remove the xoffset, center the sprite
 		sta tmp
 		lda xtablehi,x
 		sbc #0
@@ -1302,13 +1293,9 @@ get_tile_above_sprite
 		lsr
 		sta tmp2
 
-		lda #yoffset
-		clc
-		adc #1		; check 1 pixel above sprite
-		sta tmp
 		lda ytable,x
 		sec
-		sbc tmp		; first remove the yoffset
+		sbc #yoffset+1	; remove the yoffset
 		lsr
 		lsr
 		lsr
@@ -1320,23 +1307,18 @@ get_tile_above_sprite
 		adc tmp2
 		tax
 		lda tilebuffer,x
-		stx plr_r_last_tilepos
-		sta plr_r_last_tileidx
 		rts
 
 ; get_tile_below_sprite
 ; Destroys:	x, y, a
 ; Parameters: 	x - sprite index
 ; Return value: a - Tile ID
+;               x - Tile pos
 get_tile_below_sprite
 
-		lda #xoffset
-		sec
-		sbc #8		; center x from sprite
-		sta tmp
 		lda xtablelo,x
 		sec
-		sbc tmp		; first remove the xoffset
+		sbc #xoffset-8	; remove the xoffset, center the sprite
 		sta tmp
 		lda xtablehi,x
 		sbc #0
@@ -1348,13 +1330,9 @@ get_tile_below_sprite
 		lsr
 		sta tmp2
 
-		lda #yoffset
-		sec
-		sbc #16
-		sta tmp
 		lda ytable,x
 		sec
-		sbc tmp		; first remove the yoffset
+		sbc #yoffset-16	; remove the yoffset
 		lsr
 		lsr
 		lsr
@@ -1366,12 +1344,9 @@ get_tile_below_sprite
 		adc tmp2
 		tax
 		lda tilebuffer,x
-		stx plr_r_last_tilepos
-		sta plr_r_last_tileidx
 		rts
 
-;-----------------------------------------------------------
-
+;
 ;-----------------------------------------------------------
 ; calc_individual_forces
 ; destroys registers a,x
@@ -2137,7 +2112,7 @@ increase_gold
 ;-		dex
 ;		sta ytable,x
 ;		bne -
-;		
+;
 ;		rts
 
 ; -----------------------------------------------
@@ -2156,29 +2131,15 @@ get_index_from_map_coords
 
 ; --------------------------------------------
 ; get_random
-; stores a random byte value in RandomNumber variable
+; gets a random byte value in register a.
 ; destroys registers: none
+; parameters: RandomIdx - seed (optional)
+; returns: a - random number
+; --------------------------------------------
 get_random
-		sta safe_tmp
-		stx safe_tmp2
-		lda #0
-		ora $dc09
-		asl
-		asl
-		asl
-		asl
-		ora $dc08
-		ora $d012
-		pha
-		and #7
-		tax
-		pla
-		adc random_table,x
-		eor RandomIdx
-		sta RandomNumber
+		ldy RandomIdx
+		lda random_table,y
 		inc RandomIdx
-		ldx safe_tmp2
-		lda safe_tmp
 		rts
 
 ; --------------------------------------------
@@ -2356,7 +2317,7 @@ transform_a_div_16_mul_12
 		lda #0
 		cpy #$10
 		bcc +		; if offy < 12 goto +
-		adc #11		; adding actually 16 here, carry is always set!
+		adc #11		; adding actually 12 here, carry is always set!
 		cpy #$20
 		bcc +		; if offy < 24 goto +
 		adc #11
@@ -2434,7 +2395,7 @@ transform_a_mul_16_div_12
 		adc #15
 		cpy #144
 		bcc +
-		adc #15		
+		adc #15
 +		rts
 ; --------------------------------------------
 
@@ -2691,7 +2652,7 @@ copy_screen
 ;-----------------------------------------------------------
 clear_status_bar
 	ldx #28
-	lda #$c0
+	lda #txt_sp
 -	sta $43bf,x
 	sta $47bf,x
 	dex
@@ -2796,10 +2757,8 @@ zp_dest_hi = zp_bitbuf + 2      ; dest addr hi
 tabl_bi = decrunch_table
 tabl_lo = decrunch_table + 52
 tabl_hi = decrunch_table + 104
-		;                  L   O   A   D   I   N   G
-loading_text	!byte $c0,$c0,$c0,$cc,$cf,$c1,$c4,$c9,$ce,$c7,$c0,$c0,$c0
-		;              D   E   P   A   C   K   I   N   G
-decr_text	!byte $c0,$c0,$d5,$ce,$d0,$c1,$c3,$cb,$c9,$ce,$c7,$c0,$c0
+loading_text	!scr "   loading   "
+decr_text	!scr "  depacking  "
 
 destination_lo	= *
 destination_hi  = * + 1
@@ -2870,7 +2829,7 @@ load_and_decrunch
 ; a - text len
 ; x - text low byte
 ; y - text high byte
-; destination_lo, destination_hi - 
+; destination_lo, destination_hi -
 ;   Chosen dungeon from dungeon_names_lo
 ;   and dungeon_names_hi.
 ; --------------------------------------
@@ -2882,17 +2841,17 @@ caption_text
 		lda destination_hi
 		sta dest_txt+2
 		ldy #0
--			lda #0
+-			lda #32
 			sta $41c6,y
 			sta $423e,y
 capt_txt		lda $0000,y
 			sta $41ee,y
 dest_txt		lda $0000,y
-			cmp #$db
+			cmp #0
 			bne +
 			lda MapID
 			clc
-			adc #$db
+			adc #num_start
 +			sta $4216,y
 			lda #1
 			sta $d9ee,y
@@ -2916,10 +2875,12 @@ hex_error
 		tay
 		lda hextable,y
 		sta $4000
+		lda #1
+		sta $d800
 		rts
 hextable
-		!byte $dc,$dd,$de,$df,$e0,$e1,$e2,$e3
-		!byte $e4,$e5,$c1,$c2,$c3,$c4,$c5,$c6
+		!byte 48,49,50,51,52,53,54,55
+		!byte 56,57,1,2,3,4,5,6
 ; --------------------------------------
 ; get crunched byte routine
 ; --------------------------------------
@@ -3257,11 +3218,11 @@ setup
 		sta MobSrc+1
 
 		; Set player inventory data
-		lda #$00
+		lda #$ff
 		sta SelWeapon
-		lda #1
+		lda #0
 		sta WeaponListLen
-		lda #1
+		lda #0
 		sta WeaponList
 
 		; position the sprites
@@ -3284,7 +3245,7 @@ setup
 		lda #0
 		adc xtablehi+player
 		sta xtablehi+player
-		
+
 		lda StartLocY,x
 		+immediate_a_mod_n 12	; Clamp to 0-11 range
 		asl			; multiply by 16
@@ -3317,7 +3278,7 @@ setup
 		lda #10
 		sta $d026
 
-		; set player contour and fill colors 
+		; set player contour and fill colors
 		lda #0
 		sta color+player
 		lda #13
@@ -3355,6 +3316,7 @@ setup
 
 		lda #0
 		sta put_tile_attr
+		sta FrameStarted
 		jsr draw_screen
 		jsr swap_screen
 		jsr copy_screen
@@ -3364,6 +3326,7 @@ setup
 		; init music
 		lda #0
 		jsr $2000
+
 		rts
 
 
@@ -3373,14 +3336,14 @@ setup
 ;-----------------------------------------------------------
 set_music_sprites_irq
 		sei
-		lda #$1b	; Default settings, normal text mode, set raster high bit to 0
-		sta $d011
 
 		lda #<maininter
 		sta $fffe
 		lda #>maininter
 		sta $ffff
 
+		lda #$1b	; Default settings, normal text mode, set raster high bit to 0
+		sta $d011
 		lda #$00	; Set main interrupt to happen at line 32
 		sta $d012
 
@@ -3477,7 +3440,7 @@ set_scroll_irq
 		inc $d019	; acknowledge raster irq.
 		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
 
-		cli		
+		cli
 
 		rts
 
@@ -3527,8 +3490,190 @@ ds_exit_target_loop
 		rts
 
 ;-----------------------------------------------------------
-end_code_800
 ; -------------------------------------------------
+spawn_loot
+		lda #0
+		ldx MobsPresent
+		inc MobsPresent
+		sta xtablehi+enemy,x
+		sta xtablehi+enemy+16,x
+		lda tmp_chest_loc
+		+immediate_a_mod_n 20
+		clc
+		asl
+		asl
+		asl
+		asl
+		adc #xoffset
+		sta xtablelo+enemy,x
+		sta xtablelo+enemy+16,x
+		rol xtablehi+enemy,x
+		lda xtablehi+enemy,x
+		sta xtablehi+enemy+16,x
+		lda tmp_chest_loc
+		+immediate_a_div_by_n 20
+		tya
+		clc
+		asl
+		asl
+		asl
+		asl
+		adc #yoffset
+		sta ytable+enemy,x
+		sta ytable+enemy+16,x
+		sta loot_stored_pos
+		lda #0
+		sta loot_frame_counter
+
+		lda #f_sword+4
+		sta frame+enemy,x
+		lda #f_sword
+		sta frame+enemy+16,x
+
+		lda #col_f_sword
+		sta color+enemy,x
+
+		lda #col_c_sword
+		sta color+enemy+16,x
+
+		lda #EnemyLootVolley
+		sta enemy_state,x
+		lda #50
+		sta enemy_timer,x
+		rts
+; -------------------------------------------------
+; Inventory interrupt
+;
+; -------------------------------------------------
+inventory_interrupt
+		sta areg
+		stx xreg
+		sty yreg
+
+		jsr $2003
+
+		lda areg
+		ldx xreg
+		ldy yreg
+
+		lda #120
+		sta $d012
+
+		lda #<inventory_interrupt0
+		sta $fffe
+		lda #>inventory_interrupt0
+		sta $ffff
+
+		; Turn off sprites but initialize their positions
+		lda #0
+		sta $d015
+		lda #104
+		sta $d001
+		sta $d003
+		sta $d005
+		sta $d007
+		sta $d009
+		sta $d00b
+		sta $d00d
+		sta $d00f
+
+		; Set color and image on upper half of inventory sprites
+		ldx #0
+-			lda inv_item_color0,x
+			sta $d02b,x
+			lda inv_item_color1,x
+			sta $d027,x
+			lda inv_sprites0,x
+			sta $43fc,x
+			lda inv_sprites1,x
+			sta $43f8,x
+			inx
+			cpx #4
+			bne -
+
+		lda items_mask
+		sta $d015
+
+		inc $d019	; acknowledge raster irq.
+		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
+
+		lda areg
+		ldx xreg
+
+		rti
+
+inventory_interrupt0
+
+		sta areg
+		stx xreg
+
+		lda #52
+		sta $d012
+
+		lda #<inventory_interrupt
+		sta $fffe
+		lda #>inventory_interrupt
+		sta $ffff
+
+		; Turn off sprites but initialize their positions
+		lda #0
+		sta $d015
+		lda #128
+		sta $d001
+		sta $d003
+		sta $d005
+		sta $d007
+		sta $d009
+		sta $d00b
+		sta $d00d
+		sta $d00f
+
+		; Set color and image on upper half of inventory sprites
+		ldx #0
+-			lda inv_item_color0+4,x
+			sta $d02b,x
+			lda inv_item_color1+4,x
+			sta $d027,x
+			lda inv_sprites0+4,x
+			sta $43fc,x
+			lda inv_sprites1+4,x
+			sta $43f8,x
+			inx
+			cpx #4
+			bne -
+
+		lda items_mask+1
+		sta $d015
+
+		inc $d019	; acknowledge raster irq.
+		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
+
+		lda areg
+		ldx xreg
+		rti
+
+inventory_interrupt1
+		rti
+
+inventory_interrupt2
+		rti
+
+inv_sprite_pos	!byte $80,$a0,$c0,$e0
+inv_items	!byte $18,$60,$01,$04,$08,$10,$20,$c0
+inv_masks	!byte $11,$22,$44,$88
+inv_item_color0	!byte $09,$07,$07,$01,$02,$02,$08,$05
+inv_item_color1	!byte $0e,$09,$0c,$09,$07,$09,$0b,$0b
+arrow_color	!byte $01,$08,$03
+necklace_color	!byte $07,$05,$03
+armor_color	!byte $0c,$07,$02
+inv_sprites0	!byte f_bow,f_necklace,f_shield,f_masterkey,f_torch,f_gauntlet,f_raft,f_armor
+inv_sprites1	!byte f_bow+4,f_necklace+4,f_shield+4,f_masterkey+4,f_torch+4,f_gauntlet+4,f_raft+4,f_armor+4
+		!byte $00
+		!byte $00
+
+;-----------------------------------------------------------
+end_code_800
+;-----------------------------------------------------------
 
 
 
@@ -3652,13 +3797,39 @@ begin_code_3k
 		iny
 		bne --
 
+main_routine
 		asl $d019	; ack IRQs
 		lda $dc0d
 		;lda $dd0d
 
 		cli
--
-		jmp -
+--
+		lda StatsUpdated
+		beq +
+			jsr draw_stats
+			lda #0
+			sta StatsUpdated
++
+		lda FrameStarted
+		beq --
+
+		lda #0
+		sta FrameStarted
+
+		; Scroll a tile to give nice impression
+		jsr scroll_tile
+
+		; Calculate pushback forces
+		jsr calc_individual_forces
+
+		; Perform parallel tasks here
+		lda TaskPointer
+		beq +
+TaskPointer=Task+1
+Task			jsr $0000
+		lda #$00
+		sta TaskPointer
++		jmp --
 
 ;-----------------------------------------------------------
 ; player_takes_damage
@@ -3856,20 +4027,18 @@ player_fades
 		inx
 		cpx #9
 		bne -
-		
+
 		rts
 
-text_game_over	!byte $c7,$c1,$cd,$c5,$c0,$cf,$d6,$c5,$d2
+text_game_over	!scr "game over"
 player_fades_counter
 		!byte $00
 
 
 ;-----------------------------------------------------------
-; ctrl_player - read keyboard + move player + check map collision
-; returns: a
-; 0 - player has moved to another screen by going close
-;     to a screen edge.
-; 1 - player is still on same screen.
+; prepare_new_map - loads the new map into place
+; parameters: MapID (which map to load)
+; returns: nothing
 ;-----------------------------------------------------------
 prepare_new_map
 		; Load the correct map and set things up
@@ -3964,7 +4133,7 @@ ctrl_player
 
 +		cmp #PlayerStateTransitInit
 		bne +
-			
+
 			jsr unpack_next_screen	; destroys tmp also
 			lda #PlayerStateTransitDrawBack
 			sta PlayerState
@@ -4003,6 +4172,7 @@ keep_transit
 +		cmp #PlayerStateTransitEnd
 		bne +
 
+			sei
 			lda #0
 			sta transit_x
 			sta PlayerState
@@ -4016,6 +4186,7 @@ keep_transit
 			sta xtablelo+player
 			lda tmp_trans_y
 			sta ytable+player
+			cli
 
 			jmp ctrl_player_check_edges
 
@@ -4026,7 +4197,7 @@ keep_transit
 			ldy tmp_chest_idx
 
 			jsr open_chest
-			; TODO: Spawn item
+			jsr spawn_loot
 
 			lda #PlayerStateLootChest
 			sta PlayerState
@@ -4041,14 +4212,22 @@ keep_transit
 			lda #PlayerStateInControl
 			sta PlayerState
 			jmp ctrl_player_check_edges
-			
+
 +		cmp #PlayerStatePullSwitch
 		bne +
 			; should be switch!
 			ldx tmp_switch_loc
 			ldy tmp_switch_idx
 
-			jsr change_switch_state
+			; set parameters to change_switch_state routine
+			stx sw_src_pos
+			sty sw_src_tile
+
+			; Add asynchronous task "change_switch_state"
+			lda #<change_switch_state
+			sta TaskPointer
+			lda #>change_switch_state
+			sta TaskPointer+1
 
 			lda #PlayerStateInControl
 			sta PlayerState
@@ -4073,11 +4252,8 @@ keep_transit
 			jsr prepare_new_map
 			jsr setup
 
-			cli		; enable interrupts
-			asl $d019	; acknowledge interrupts
-			lda $dc0d
 
-			jmp *
+			jmp main_routine
 			;lda #1	; set a to 1 to not scroll screen
 			;rts
 
@@ -4311,7 +4487,7 @@ open_chest
 		lda screen_id
 		eor #01
 		sta screen_id
-			
+
 		cpy #TileChestClosedLeft
 		bne +
 			ldy #TileChestOpenLeft
@@ -4351,9 +4527,6 @@ open_chest
 ;               2 = No switch found at specified position!
 ;-----------------------------------------------------------
 change_switch_state
-
-		stx sw_src_pos
-		sty sw_src_tile
 
 		; First the intelligence...
 		ldx CurrentRoomIdx
@@ -4418,8 +4591,8 @@ next_sw_target
 					lda sw_state_swa	; switch A index
 					eor swbase,y
 					sta sw_state	; save XORed state
-					
-					jmp check_if_local_update	
+
+					jmp check_if_local_update
 +				; else
 					; Normal AND condition
 					ldy sw_cond		; switch B index
@@ -4428,7 +4601,7 @@ next_sw_target
 					sta sw_state	; save ANDed state
 
 					jmp check_if_local_update
-				; endif		
+				; endif
 exit_switch_condition
 				lda sw_state_swa
 				sta sw_state
@@ -4445,7 +4618,7 @@ check_if_local_update
 				tax
 				ldy swtargetbase+1,x	; first get the tile based on state
 				sty sw_target_tile	; save target tile
-				
+
 				lda sw_target_room
 				cmp CurrentRoomIdx	; Is it the current room?
 				bne skip_local_target_update	; Nope, so skip local room update
@@ -4482,7 +4655,7 @@ skip_local_target_update
 					jmp -
 
 ++					ldx sw_target_pos
-					lda swtargetbase+1,x 
+					lda swtargetbase+1,x
 					cmp pc_target_list_base+1,y	; Is the tile position also the same?
 					bne --				; If not, check next persistent change
 									; index.
@@ -4495,7 +4668,7 @@ skip_local_target_update
 				sta pc_target_list_base+1,y
 				lda sw_target_tile
 				sta pc_target_list_base+2,y
-				
+
 				ldy sw_tmp_y		; get back the switch index
 				ldx sw_tmp_x		; get back the switch list index
 				iny	; --> get next switch target
@@ -4539,7 +4712,7 @@ sw_src_tile	!byte $00
 sw_target_room	!byte $00
 sw_target_pos	!byte $00
 sw_target_tile	!byte $00
-sw_state	!byte $00	; TODO: this changes to some weird value, monitor it while running XOR switch.
+sw_state	!byte $00
 sw_state_swa	!byte $00
 sw_tmp_y	!byte $00
 sw_tmp_x	!byte $00
@@ -4571,7 +4744,7 @@ move_screen_left
 		ora #$10
 		sta $d016
 		and #7
-	
+
 		; if scroll is 0, 8, 16 etc.. then shift color
 		; if scroll is 4, 12, 20 etc.. then shift chars
 		beq do_shift_color_right
@@ -4623,7 +4796,7 @@ move_screen_right
 		ora #$10
 		sta $d016
 		and #7
-	
+
 		; if scroll is 0, 8, 16 etc.. then shift color
 		; if scroll is 4, 12, 20 etc.. then shift chars
 		cmp #4
@@ -4672,7 +4845,7 @@ move_screen_up
 		ora #$18
 		sta $d011
 		and #7
-	
+
 		; if scroll is 0, 8, 12, 16 etc.. then shift color else shift chars
 		beq do_shift_down_color
 		cmp #$04
@@ -4717,7 +4890,7 @@ move_screen_down
 		sta $d011
 		and #7
 		cmp #4
-	
+
 		; if scroll is 4, 12, 20 etc.. then shift color
 		; if scroll is 0, 8, 16 etc.. then shift chars
 		beq do_shift_up_color
@@ -4757,7 +4930,7 @@ put_tile
 		tya
 		pha
 
-		; find the backbuffer, then draw to it, 
+		; find the backbuffer, then draw to it,
 		lda screen_id
 		beq tile_to_back
 ; tile_to_front
@@ -4823,17 +4996,21 @@ end_tile
 		; Recover the tile index
 		ldx tmp2
 
+		ldy tiledata,x
+		lda colordata,y
 		ldy #0
-		lda colordata,x
 		sta (tmp_addr),y
-		iny
-		lda colordata+1,x
+		ldy tiledata+1,x
+		lda colordata,y
+		ldy #1
 		sta (tmp_addr),y
+		ldy tiledata+2,x
+		lda colordata,y
 		ldy #40
-		lda colordata+2,x
 		sta (tmp_addr),y
-		iny
-		lda colordata+3,x
+		ldy tiledata+3,x
+		lda colordata,y
+		ldy #41
 		sta (tmp_addr),y
 
 		pla
@@ -4887,9 +5064,9 @@ draw_left
 			asl ; multiply by 4
 			pha ; <<< TILE IDX
 
-			; find the backbuffer, then draw to it, 
+			; find the backbuffer, then draw to it,
 			lda screen_id
-			beq + 
+			beq +
 			; if backbuffer is a
 				lda tilepos_hi_a,x
 				jmp ++
@@ -4972,7 +5149,7 @@ color_left
 -		; while (x < 12)
 
 			tay ; keep column counter in y
-			pha ; <<< COLUMN COUNTER 
+			pha ; <<< COLUMN COUNTER
 
 			; calculate offset where to get tiles (in tilebuffer area)
 			; multiply row with 20
@@ -5022,22 +5199,26 @@ color_left
 			; if left side of tile
 
 				; color left part of tile only
+				ldy tiledata,x
+				lda colordata,y
 				ldy #0
-				lda colordata,x
 				sta (tmp_addr2),y
+				ldy tiledata+2,x
+				lda colordata,y
 				ldy #40
-				lda colordata+2,x
 				sta (tmp_addr2),y
 
 				jmp ++
 +			; else right side of tile
 
 				; color right part of tile only
+				ldy tiledata+1,x
+				lda colordata,y
 				ldy #0
-				lda colordata+1,x
 				sta (tmp_addr2),y
+				ldy tiledata+3,x
+				lda colordata,y
 				ldy #40
-				lda colordata+3,x
 				sta (tmp_addr2),y
 ++			; endif
 
@@ -5100,7 +5281,7 @@ draw_right
 			asl ; multiply by 4
 			pha ; <<< TILE IDX
 
-			; find the backbuffer, then draw to it, 
+			; find the backbuffer, then draw to it,
 			lda screen_id
 			beq +
 			; if backbuffer a
@@ -5233,21 +5414,25 @@ color_right
 			; if left part of tile
 
 				; color left part of tile only
+				ldy tiledata,x
+				lda colordata,y
 				ldy #39
-				lda colordata,x
 				sta (tmp_addr2),y
+				ldy tiledata+2,x
+				lda colordata,y
 				ldy #79
-				lda colordata+2,x
 				sta (tmp_addr2),y
 				jmp ++
 +			; else right part of tile
 
 				; color right part of tile only
+				ldy tiledata+1,x
+				lda colordata,y
 				ldy #39
-				lda colordata+1,x
 				sta (tmp_addr2),y
+				ldy tiledata+3,x
+				lda colordata,y
 				ldy #79
-				lda colordata+3,x
 				sta (tmp_addr2),y
 
 ++			; endif
@@ -5307,7 +5492,7 @@ draw_top
 			asl ; multiply by 4
 			pha	; <<< TILE IDX
 
-			; find the backbuffer, then draw to it, 
+			; find the backbuffer, then draw to it,
 			lda screen_id
 			beq +
 			; if backbuffer is a
@@ -5438,22 +5623,26 @@ color_top
 			; if top part of tile
 
 				; color top part of tile only
+				ldy tiledata,x
+				lda colordata,y
 				ldy #0
-				lda colordata,x
 				sta (tmp_addr2),y
-				iny
-				lda colordata+1,x
+				ldy tiledata,x
+				lda colordata,y
+				ldy #1
 				sta (tmp_addr2),y
 				jmp ++
 
 +			; else bottom part of tile
 
 				; color bottom part of tile only
+				ldy tiledata+2,x
+				lda colordata,y
 				ldy #0
-				lda colordata+2,x
 				sta (tmp_addr2),y
-				iny
-				lda colordata+3,x
+				ldy tiledata+3,x
+				lda colordata,y
+				ldy #1
 				sta (tmp_addr2),y
 ++			; endif
 
@@ -5513,8 +5702,8 @@ draw_bottom
 			asl
 			asl ; multiply by 4
 			pha	; <<< TILE IDX
-		
-			; find the backbuffer, then draw to it, 
+
+			; find the backbuffer, then draw to it,
 			lda screen_id
 			beq +
 			; if backbuffer a
@@ -5619,7 +5808,7 @@ color_bottom
 			asl
 			asl ; multiply by 4
 			pha ; <<< TILE IDX
-		
+
 			; Get high byte for tile color data and store in tmp_addr
 			lda colormem_hi+220,x
 			sta tmp_addr2+1
@@ -5637,21 +5826,25 @@ color_bottom
 			beq +
 			; if top part of tile
 				; color top part of tile only
+				ldy tiledata,x
+				lda colordata,y
 				ldy #40
-				lda colordata,x
 				sta (tmp_addr2),y
-				iny
-				lda colordata+1,x
+				ldy tiledata+1,x
+				lda colordata,y
+				ldy #41
 				sta (tmp_addr2),y
 				jmp ++
 
 +			; else bottom part of tile
 				; color bottom part of tile only
+				ldy tiledata+2,x
+				lda colordata,y
 				ldy #40
-				lda colordata+2,x
 				sta (tmp_addr2),y
-				iny
-				lda colordata+3,x
+				ldy tiledata+3,x
+				lda colordata,y
+				ldy #41
 				sta (tmp_addr2),y
 ++			; endif
 
@@ -5740,8 +5933,8 @@ unpack_next_screen
 		lda #>mapdata
 		adc tmp_addr+1
 		sta tmp_addr+1
-		
-		; got the 16-bit dictionary entry now in tmp_addr, 
+
+		; got the 16-bit dictionary entry now in tmp_addr,
 		; use it to load the compressed data start address
 		clc
 		ldy #0
@@ -6241,52 +6434,52 @@ read_keyboard
 		lda #0
 		sta ScanResult
 
-		lda #%11111111  ; CIA#1 Port A set to output 
-		sta $dc02             
+		lda #%11111111  ; CIA#1 Port A set to output
+		sta $dc02
 		lda #%00000000  ; CIA#1 Port B set to input
-		sta $dc03             
-    
+		sta $dc03
+
 check_space
 		lda #%01111111  ; select row 8
-		sta $dc00 
+		sta $dc00
 		lda $dc01       ; load column information
-		and #%00010000  ; test 'space' key to exit 
+		and #%00010000  ; test 'space' key to exit
 		bne check_a
 		lda #1
 		ora ScanResult
 		sta ScanResult
 check_a
 		lda #%11111101  ; select row 2
-		sta $dc00 
+		sta $dc00
 		lda $dc01       ; load column information
-		and #%00000100  ; test 'a' key  
+		and #%00000100  ; test 'a' key
 		bne check_d
 		lda #2
 		ora ScanResult
 		sta ScanResult
 check_d
 		lda #%11111011  ; select row 3
-		sta $dc00 
+		sta $dc00
 		lda $dc01       ; load column information
-		and #%00000100  ; test 'd' key  
+		and #%00000100  ; test 'd' key
 		bne check_w
 		lda #4
 		ora ScanResult
 		sta ScanResult
 check_w
 		lda #%11111101  ; select row 2
-		sta $dc00 
+		sta $dc00
 		lda $dc01       ; load column information
-		and #%00000010  ; test 'w' key 
+		and #%00000010  ; test 'w' key
 		bne check_s
 		lda #8
 		ora ScanResult
 		sta ScanResult
 check_s
 		lda #%11111101  ; select row 2
-		sta $dc00 
+		sta $dc00
 		lda $dc01       ; load column information
-		and #%00100000  ; test 's' key 
+		and #%00100000  ; test 's' key
 		bne check_n
 		lda #16
 		ora ScanResult
@@ -6313,112 +6506,6 @@ skip
 		rts
 
 
-;-----------------------------------------------------------
-; draw_stats - show a stats bar on the top - use chars
-; parameters: -
-; return value: -
-; destroys: a, x, y, C, Z, N
-;-----------------------------------------------------------
-draw_stats
-		lda #1
-		ldx #39	; set status text to white color
--		sta $dbc0,x
-		dex
-		bne -
-		sta $dbc0
-
-		lda #$c0	; set whitespace (clear) status bar
-		ldx #39
--		sta $43c0,x
-		dex
-		bne -
-		sta $43c0
-
-		lda #$ee	; Heart symbol here
-		sta $43c2
-		lda #2
-		sta $dbc2
-
-		ldx #0
-		clc
-		lda player_hp
-		beq +
-			adc #$dc
-			sta $43c4,x
-			inx
-+
-		lda player_hp+1
-		clc
-		adc #$dc
-		sta $43c4,x
-		inx
-
-		lda #$f1	; /
-		sta $43c4,x
-		inx
-
-		lda player_max_hp
-		beq +
-			clc
-			adc #$dc
-			sta $43c4,x
-			inx
-+
-		lda player_max_hp+1
-		clc
-		adc #$dc
-		sta $43c4,x
-
-		lda #$ef	; Key symbol here
-		sta $43ca
-		lda #7
-		sta $dbca
-
-		lda #$dc
-		sta $43cc
-
-		lda #15
-		sta $dbd0
-		lda #$f0	; Coin symbol here
-		sta $43d0
-
-		ldx #0
-		lda player_gold
-		beq +
-			clc
-			adc #$dc
-			sta $43d2,x
-			inx
-+		lda player_gold+1
-		bne ++
-		cpx #0
-		beq +
-++			clc
-			adc #$dc
-			sta $43d2,x
-			inx
-+		lda player_gold+2
-		bne ++
-		cpx #0
-		beq +
-++			clc
-			adc #$dc
-			sta $43d2,x
-			inx
-+		lda player_gold+3
-		bne ++
-		cpx #0
-		beq +
-++			clc
-			adc #$dc
-			sta $43d2,x
-			inx
-+		lda player_gold+4
-		clc
-		adc #$dc
-		sta $43d2,x
-
-		rts
 ;-----------------------------------------------------------
 
 end_code_3k
@@ -6455,10 +6542,12 @@ mapdata
 		!binary "aad_map_big.rle"
 end_mapdata
 		; Map color data 256 bytes
+		*=$be00
 colordata
 		!binary "aad_charset_attrs_big.bin"
 
 		; Map tile data 256 bytes
+		*=$bf00
 tiledata
 		!binary "aad_tiles_big.bin"
 
@@ -6486,128 +6575,6 @@ spritedata
 begin_code_c000
 
 ;-----------------------------------------------------------
-; Inventory interrupt
-;
-;-----------------------------------------------------------
-inventory_interrupt
-		sta areg
-		stx xreg
-		sty yreg
-
-		jsr $2003
-
-		lda areg
-		ldx xreg
-		ldy yreg
-
-		lda #120
-		sta $d012
-
-		lda #<inventory_interrupt0
-		sta $fffe
-		lda #>inventory_interrupt0
-		sta $ffff
-
-		; Turn off sprites but initialize their positions
-		lda #0
-		sta $d015
-		lda #104
-		sta $d001
-		sta $d003
-		sta $d005
-		sta $d007
-		sta $d009
-		sta $d00b
-		sta $d00d
-		sta $d00f
-
-		; Set color and image on upper half of inventory sprites 
-		ldx #0
--			lda inv_item_color0,x
-			sta $d02b,x
-			lda inv_item_color1,x
-			sta $d027,x
-			lda inv_sprites0,x
-			sta $43fc,x
-			lda inv_sprites1,x
-			sta $43f8,x
-			inx
-			cpx #4
-			bne -
-
-		lda items_mask
-		sta $d015
-
-		inc $d019	; acknowledge raster irq.
-		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
-
-		rti
-
-inventory_interrupt0
-
-		lda #52
-		sta $d012
-
-		lda #<inventory_interrupt
-		sta $fffe
-		lda #>inventory_interrupt
-		sta $ffff
-
-		; Turn off sprites but initialize their positions
-		lda #0
-		sta $d015
-		lda #128
-		sta $d001
-		sta $d003
-		sta $d005
-		sta $d007
-		sta $d009
-		sta $d00b
-		sta $d00d
-		sta $d00f
-
-		; Set color and image on upper half of inventory sprites 
-		ldx #0
--			lda inv_item_color0+4,x
-			sta $d02b,x
-			lda inv_item_color1+4,x
-			sta $d027,x
-			lda inv_sprites0+4,x
-			sta $43fc,x
-			lda inv_sprites1+4,x
-			sta $43f8,x
-			inx
-			cpx #4
-			bne -
-
-		lda items_mask+1
-		sta $d015
-
-		inc $d019	; acknowledge raster irq.
-		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
-
-		rti
-
-inventory_interrupt1
-		rti
-
-inventory_interrupt2
-		rti
-
-inv_sprite_pos	!byte $80,$a0,$c0,$e0
-inv_items	!byte $18,$60,$01,$04,$08,$10,$20,$c0
-inv_masks	!byte $11,$22,$44,$88
-inv_item_color0	!byte $09,$07,$07,$01,$02,$02,$08,$05
-inv_item_color1	!byte $0e,$09,$0c,$09,$07,$09,$0b,$0b
-arrow_color	!byte $01,$08,$03
-necklace_color	!byte $07,$05,$03
-armor_color	!byte $0c,$07,$02
-inv_sprites0	!byte f_bow,f_necklace,f_shield,f_masterkey,f_torch,f_gauntlet,f_raft,f_armor
-inv_sprites1	!byte f_bow+4,f_necklace+4,f_shield+4,f_masterkey+4,f_torch+4,f_gauntlet+4,f_raft+4,f_armor+4
-		!byte $00
-		!byte $00
-
-;-----------------------------------------------------------
 ; Sprite multiplexer interrupt
 ;
 ;-----------------------------------------------------------
@@ -6616,10 +6583,16 @@ maininter
 		sta areg	; save registers to zero page
 		stx xreg
 		sty yreg
-
-		;inc $d020
+		lda FrameStarted
+		beq +
+		asl $d019	; ack IRQs
+		lda areg
+		rti
++
+		inc FrameStarted
+		inc $d020
 		jsr $2003
-		;dec $d020	; set cycle measuring indicator color in the border
+		dec $d020	; set cycle measuring indicator color in the border
 
 		lda #$00	; initialize no double height, sprite over chars priority,
 		sta $d017	; no double width (make table for this and double height?)
@@ -6634,7 +6607,7 @@ maininter
 
 		; Less or equal to 4 two-layer sprites
 		; sprites
-		; ------------- 
+		; -------------
 
 		lda #$4c	;jmp $0000	; self-modifying code, sets the jmp opcode at "switch label"
 		sta switch
@@ -6648,7 +6621,7 @@ maininter
 		sta jumphi
 		lda #$00
 		sta $d010		; init y high bit for all sprites to 0
-		jmp (jumplo)		; ---> Jump to the sprite sorter routine. 
+		jmp (jumplo)		; ---> Jump to the sprite sorter routine.
 
 		; More than 4 two-layer sprites
 		; sprites
@@ -6663,7 +6636,7 @@ morethan4	lda #$ff		; just enable all sprites directly, we use all in multiplexi
 		sta switch
 		lda #$00
 
-		; get the next postitions of the virtual sprites to distribute over the sprites 0-7; 
+		; get the next postitions of the virtual sprites to distribute over the sprites 0-7;
 		; the positions need to be known before we start sorting them in the next frame.
 
 ; 4 two-layer sprites:
@@ -7030,10 +7003,11 @@ activatetab	; !byte $00,$01,$03,$07,$0f,$1f,$3f,$7f,$ff
 ; destroys registers!
 ;--------------------------------------
 statusline
+		sta areg
+		stx xreg
+
 		; reset scroll
-		lda $d011
-		and #$f8
-		ora #4
+		lda #$1c
 		sta $d011
 		lda $d016
 		and #$f8
@@ -7052,7 +7026,7 @@ statusline
 		nop
 		nop
 
-	
+
 		lda #0
 		sta $d021
 		ldx #126
@@ -7063,43 +7037,36 @@ statusline
 		lda BGColor,x
 		sta $d021
 
+
+		lda #<maininter
+		sta $fffe
+		lda #>maininter
+		sta $ffff
+		lda #$00	; Set main interrupt to happen at line 32
+		sta $d012
 		lda #$1b	; Default settings, normal text mode, set raster high bit to 0
 		sta $d011
 
-		lda scrollstate
-		cmp #state_idle
-		bne +
-			lda #<maininter
-			sta $fffe
-			lda #>maininter
-			sta $ffff
-			jmp ++
-+
-			lda #<scrollirq
-			sta $fffe
-			lda #>scrollirq
-			sta $ffff
-++
-		lda #$00	; Set main interrupt to happen at line 32
-		sta $d012
+		inc $d019	; acknowledge raster irq.
+		lda $dc0d	; acknowledge pending irqs.
 
-		;inc $d019	; acknowledge raster irq.
-		;lda $dc0d	; acknowledge pending irqs.
-
+		ldx xreg
+		lda areg
 		rti
 
 ;--------------------------------------
 exitinter
-		stx xreg
-
-		;; From this point and onward the sprites have been drawn. 
+		;; From this point and onward the sprites have been drawn.
 		;; There is plenty of raster time to trigger another interrupt just before the last bad line
 		;; and use black background.
 
+		lda #$80
+		bit $d011
+		bmi +
 		lda $d012
 
-		; if (raster line < 242 and 
-		;     PlayerState != PlayerStateFades and 
+		; if (raster line < 242 and
+		;     PlayerState != PlayerStateFades and
 		;     PlayerState != PlayerStateTransitInit and
 		;     PlayerState != PlayerStateTransitDrawBack) ...
 		cmp #$f2
@@ -7112,6 +7079,8 @@ exitinter
 		cmp #PlayerStateTransitDrawBack
 		beq +
 		; then {
+			lda #$1b
+			sta $d011
 			lda #$f2
 			sta $d012
 
@@ -7131,18 +7100,14 @@ exitinter
 			lda #>maininter
 			sta $ffff
 
-			lda #$00	; Set main interrupt to happen at line 32
+			lda #$1b
+			sta $d011
+			lda #$00	; Set main interrupt to happen at line 264
 			sta $d012
 			inc $d019	; acknowledge raster irq.
 			lda $dc0d	; acknowledge pending irqs.
 			;lda $dd0d
 ++
-
-		; Calculate pushback forces
-		jsr calc_individual_forces
-
-		; All AI logic
-		jsr ctrl_enemy
 
 		inc AnimCounter
 		lda AnimCounter
@@ -7152,14 +7117,7 @@ exitinter
 		lsr
 		lsr
 		sta AnimFrame	; This will create an animation stepper of 1 image per 8 frames, in range [0-3]
-		
-		; player movement here
-		jsr ctrl_player
-		bne +
-			; abort this routine and start scrolling
-			jmp ++++
-+
-		
+
 		; Animate player
 		lda PlayerAnimState
 		asl
@@ -7179,11 +7137,15 @@ exitinter
 
 		; let enemy_qty = a;
 		ldx MobsPresent
-		beq +++	; if (enemy_qty != 0) {
-			; 	for (x=enemy_qty-1; x>=0; x--); do { 
+		bne +	; if (enemy_qty != 0) {
+		jmp +++
++
+			; 	for (x=enemy_qty-1; x>=0; x--); do {
 -			dex
 			lda enemy_state,x
 			cmp #EnemyLoot
+			beq +
+			cmp #EnemyLootVolley
 			beq +
 			cmp #EnemyDead
 			bne ++
@@ -7200,56 +7162,73 @@ exitinter
 			clc
 			adc AnimFrame	; reuse anim counter
 			tay
-			lda CurrentMobType,x
+			lda CurrentMobTypes,x
 			cmp #$80
-			bne +				; if (CurrentMobType == NPC(0))
+			bne +				; if (CurrentMobTypes == NPC(0))
 				lda NpcImageList
 				jmp ++
 +			cmp #$81
-			bne +				; if (CurrentMobType == NPC(1))
+			bne +				; if (CurrentMobTypes == NPC(1))
 				lda NpcImageList+1
 				jmp ++
-+			and #$03			
-			bne +				; if (CurrentMobType == slime(0))
++			cmp #$40
+			bne +				; if (CurrentMobTypes == NPC(0))
+				lda BossAnimTable,y
+				asl
+				asl
+				tay	; y = BossAnimTable[y] * 4
+				jsr set_boss_sprite_frames_2x2
+				jmp ++
++			cmp #$41
+			bne +				; if (CurrentMobTypes == NPC(1))
+				lda BossAnimTable,y
+				asl
+				asl
+				tay	; y = BossAnimTable[y] * 4
+				jsr set_boss_sprite_frames_2x3
+				jmp ++
++			and #$03
+			cmp #$00
+			bne +				; if (CurrentMobTypes == enemy type 0)
 				lda EnemyAnimTable,y
 				jmp ++
 +			cmp #$01
-			bne +				; if (CurrentMobType == spider(1))
+			bne +				; if (CurrentMobTypes == enemy type 1)
 				lda EnemyAnimTable+20,y
 				jmp ++
 +			cmp #$02
-			bne +				; if (CurrentMobType == skeleton(2))
+			bne +				; if (CurrentMobTypes == enemy type 2)
 				lda EnemyAnimTable+40,y
 				jmp ++
-+
-							; else (CurrentMobType == knight(3))
-				lda EnemyAnimTable+60,y
++				lda EnemyAnimTable+60,y	; else (CurrentMobTypes == enemy type 3)
 
 ++		sta frame+enemy+16,x
 		clc
 		adc #4
 		sta frame+enemy,x
 		cpx #0
-		bne -		; } // end for
+		beq +++		; } // end for
+		jmp -
 +++
 			; } // end if
 		; ---------------------------------------------------------------------------------
 
-		; From now on allow trigger on irq again (sacrifice in sprite accuracy)
-		jsr sort	; sort sprites
 
-		lda $d012
-		cmp #$f2
-		bcs ++++
+		; All AI logic
+		jsr ctrl_enemy
 
-		lda StatsUpdated
-		beq +
-			jsr draw_stats
-			lda #0
-			sta StatsUpdated
+		; player movement here
+		jsr ctrl_player
+		bne +
+			; abort this routine and start scrolling
+			jmp ++
 +
-
-++++		;inc $d019
+		; From now on allow trigger on irq again (sacrifice in sprite accuracy)
+		inc $d020
+		jsr sort	; sort sprites
+		dec $d020
+++
+		;inc $d019
 		;lda $dc0d
 		;lda $dd0d
 		lda areg
@@ -7258,6 +7237,113 @@ exitinter
 
 		rti		; ...aaand return from the multiplexing interrupt chain.
 
+scroll_tile
+		lda $49ef
+		sta scroll_tile_tmp
+		lda $49ee
+		sta $49ef
+		lda $49ed
+		sta $49ee
+		lda $49ec
+		sta $49ed
+		lda $49eb
+		sta $49ec
+		lda $49ea
+		sta $49eb
+		lda $49e9
+		sta $49ea
+		lda $49e8
+		sta $49e9
+		lda $49df
+		sta $49e8
+		lda $49de
+		sta $49df
+		lda $49dd
+		sta $49de
+		lda $49dc
+		sta $49dd
+		lda $49db
+		sta $49dc
+		lda $49da
+		sta $49db
+		lda $49d9
+		sta $49da
+		lda $49d8
+		sta $49d9
+		lda scroll_tile_tmp
+		sta $49d8
+		lda $49f7
+		sta scroll_tile_tmp
+		lda $49f6
+		sta $49f7
+		lda $49f5
+		sta $49f6
+		lda $49f4
+		sta $49f5
+		lda $49f3
+		sta $49f4
+		lda $49f2
+		sta $49f3
+		lda $49f1
+		sta $49f2
+		lda $49f0
+		sta $49f1
+		lda $49e7
+		sta $49f0
+		lda $49e6
+		sta $49e7
+		lda $49e5
+		sta $49e6
+		lda $49e4
+		sta $49e5
+		lda $49e3
+		sta $49e4
+		lda $49e2
+		sta $49e3
+		lda $49e1
+		sta $49e2
+		lda $49e0
+		sta $49e1
+		lda scroll_tile_tmp
+		sta $49e0
+		rts
+scroll_tile_tmp
+		!byte $00
+
+; Set up boss frames
+;--------------------------------------
+set_boss_sprite_frames_2x3
+		lda BossFrames2x3+1,y
+		sta frame+enemy+16+5,x
+		clc
+		adc #4
+		sta frame+enemy+5,x
+		lda BossFrames2x3+0,y
+		sta frame+enemy+16+4,x
+		clc
+		adc #4
+		sta frame+enemy+4,x
+set_boss_sprite_frames_2x2
+		lda BossFrames2x2+3,y
+		sta frame+enemy+16+3,x
+		clc
+		adc #4
+		sta frame+enemy+3,x
+		lda BossFrames2x2+2,y
+		sta frame+enemy+16+2,x
+		clc
+		adc #4
+		sta frame+enemy+2,x
+		lda BossFrames2x2+1,y
+		sta frame+enemy+16+1,x
+		clc
+		adc #4
+		sta frame+enemy+1,x
+		lda BossFrames2x2,y
+		sta frame+enemy+16,x
+		clc
+		adc #4
+		rts
 
 ; The sorting routine initialization
 ;--------------------------------------
@@ -7388,6 +7474,16 @@ sorthi	!fill items-1
 ; Sets up the enemies in the current "room" and which loot they have.
 ; ------------------------------------------------------------------------------------
 setup_enemies
+		; Create new random seed
+		lda $dc09
+		lsr
+		lsr
+		lsr
+		lsr
+		ora $dc08
+		adc $d012
+		sta RandomIdx
+
 		; clear old data
 		ldx #0
 		lda #0
@@ -7416,13 +7512,13 @@ setup_enemies
 		; get mob data from world / dungeons
 		lda (tmp_addr),y
 		tay
-		lda mobs_entries_list,y			; get current mob entry in list 
+		lda mobs_entries_list,y			; get current mob entry in list
 		tay
 
 		; set correct address for lda operation at store_mob
-		lda #<CurrentMobType
+		lda #<CurrentMobTypes
 		sta store_mob+1
-		lda #>CurrentMobType
+		lda #>CurrentMobTypes
 		sta store_mob+2
 		lda #0
 		sta MobsPresent				; set mob counter to 0
@@ -7445,9 +7541,9 @@ setup_enemies
 			and #$80
 			beq +
 				lda tmp2		; Set the NPC type
-				sta CurrentMobType
+				sta CurrentMobTypes
 					; x is screen position where NPC will stand
-				stx CurrentMobType+1
+				stx CurrentMobTypes+1
 				inc MobsPresent
 				jmp ++
 
@@ -7456,7 +7552,7 @@ setup_enemies
 				lda tmp2
 
 				; Store x mob types in list
-store_mob			sta $0000		; will be initialized with CurrentMobType list address
+store_mob			sta $0000		; will be initialized with CurrentMobTypes list address
 				inc store_mob+1		; will increment list entry each time
 				inc MobsPresent		; increment total mobs by 1
 				dex
@@ -7474,7 +7570,7 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 		ldx MobsPresent
 -
 			dex		; get next enemy idx (going backwards)
-			ldy CurrentMobType,x
+			ldy CurrentMobTypes,x
 			lda mobtable_hp,y	; get HP for the mobtype y
 			sta enemy_hp,x
 			lda mobtable_ap,y	; get AP for the mobtype y
@@ -7533,7 +7629,7 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 
 +			; else	; 3 = knight
 				lda EnemyAnimTable+60
-++
+++							; TODO: Add boss here, set up 4 or 6 sprites
 			sta frame+enemy+16,x
 			clc
 			adc #4
@@ -7555,14 +7651,13 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 
 			; Choose a random location
 			jsr get_random
-			lda RandomNumber
 			+immediate_a_mod_n 240
 
 			; tmp2 should be tileX and tmp should be tileY from random value here
 			; If not done, enemies will spawn at top left.
 			sta tmp2
 			+immediate_a_div_by_n 20
-			sty tmp			
+			sty tmp
 			lda tmp2
 			tay
 			+immediate_a_mod_n 20
@@ -7593,7 +7688,7 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 			sta xtablelo+enemy,x
 			bcc +
 			inc xtablehi+enemy,x
-+			
++
 			lda tmp
 			clc
 			asl
@@ -7602,10 +7697,10 @@ store_mob			sta $0000		; will be initialized with CurrentMobType list address
 			asl
 			adc #yoffset
 			sta ytable+enemy,x
-			
+
 			cpx #0	; more mobs to check?
 		bne -
-		; } next mob 
+		; } next mob
 
 		rts
 ; ------------------------------------------------------------------------------------
@@ -7636,75 +7731,28 @@ ctrl_enemy
 			; ------------------
 			jsr check_player_enemy_collision	; Did player try to pick up loot from
 								; killed enemy?
-
-			; ------------------
-			; Heart
-			; ------------------
-			cmp #f_heart	; heart
-			bne +++
-				lda #1
-				jsr increase_hp
-				inc StatsUpdated
-			jmp ++
-			; ------------------
-+++
-			; ------------------
-			; Gold
-			; ------------------
-			cmp #f_gold	; gold
-			bne +++
-
-				jsr get_random
-				lda RandomNumber
-				and #3
-				clc
-				adc enemy_gold,x
-				jsr increase_gold
-				inc StatsUpdated
-				
-			jmp ++
-			; ------------------
-
-+++
-			; ------------------
-			; Potions
-			; ------------------
-			cmp #f_potion	; potion
-			bne +++
-			; TODO: add potions
-			jmp ++
-			; ------------------
-+++
-			; ------------------
-			; Arrows
-			; ------------------
-			cmp #f_arrows	; arrows
-			bne +++
-			; TODO: add arrows
-			; ------------------
-+++
-			; ------------------
-			; TODO: More loot
-			; ------------------
-			; ------------------
-			jmp +
-++
-			; Set enemy as dead (looted)
-			lda #$40
-			sta enemy+frame,x
-
-			; Reset position
-			lda #0
-			sta enemy+xtablelo,x
-			sta enemy+xtablehi,x
-			sta enemy+ytable,x
-
-			; Leave as dead
-			lda #EnemyDead
-			sta enemy_state,x
+			jsr check_player_looting_enemy
 			jmp +++++
-			; ------------------
-
++
+		cmp #EnemyLootVolley
+		bne +
+			dec enemy_timer,x
+			bne ++
+				lda #EnemyLoot
+				sta enemy_state,x
+				jmp +++++
+++			ldy loot_frame_counter
+			lda loot_stored_pos
+			sec
+			sbc sine_table,y
+			clc
+			adc move_table,y
+			sta ytable+enemy,x
+			sta ytable+enemy+16,x
+			inc loot_frame_counter
+			jmp +++++
+loot_stored_pos		!byte $00
+loot_frame_counter	!byte $00
 +
 		cmp #EnemyIsNpc
 		bne +
@@ -7715,8 +7763,7 @@ ctrl_enemy
 			; ------------------
 
 
-+
-		cmp #EnemyDead
++		cmp #EnemyDead
 		bne +
 			; ------------------
 			; Dead state
@@ -7724,7 +7771,6 @@ ctrl_enemy
 			jmp +++++ 		; skip this enemy because it's dead
 			; ------------------
 
-+
 	; ------------------------------------------------
 	; If we get here, then we know that enemy is alive
 	; ------------------------------------------------
@@ -7733,7 +7779,7 @@ ctrl_enemy
 		; Check enemy with player collision
 		; ---------------------------------
 
-		jsr check_player_enemy_collision
++		jsr check_player_enemy_collision
 		cmp #0
 		beq +
 			ldy enemy_state,x
@@ -7788,11 +7834,11 @@ ctrl_enemy
 		bcs +
 		jsr check_weapon_enemy_collision
 		beq +
-		
+
 			lda PlayerAnimState
 			and #3
 			cmp #PlayerStopFacingSouth
-			bne ++				
+			bne ++
 				lda #$06
 				sta enemy_pull_force_y,x
 				jmp +
@@ -7809,8 +7855,8 @@ ctrl_enemy
 ++
 				lda #$06
 				sta enemy_pull_force_x,x
-+
-		lda enemy_state,x
+
++		lda enemy_state,x
 		cmp #EnemyIdle
 		bne +
 
@@ -7819,22 +7865,15 @@ ctrl_enemy
 			; ----------------
 			; Choose a random location and start moving there
 			jsr get_random
-			lda RandomNumber
-			+immediate_a_mod_n 240
-			sta RandomPos
-
-			; Separate nextpos into x (a) and y (y) locations
-			+immediate_a_mod_n 20
-			sta enemy_nextpos_x,x
-			lda RandomPos
-			+immediate_a_div_by_n 20
-			tya
-			sta enemy_nextpos_y,x
+			sta enemy_timer,x
+			ldy CurrentMobTypes,x
+			and num_dirs_table,y	; limit to 4 or 8 directions
+			sta enemy_dir,x
 			lda #EnemyMoving
 			sta enemy_state,x
 			jmp +++++
 			; ----------------
-					
+
 +		cmp #EnemyWaiting
 		bne +
 
@@ -7860,7 +7899,20 @@ enemy_timeout_jmp
 			; ----------------
 			; Moving State
 			; ----------------
-			jsr move_enemy
+			lda CurrentMobTypes,x
+			cmp #$40
+			bcc _normal_enemy
+				jsr move_boss_2x2
+				jmp _enemy_moved
+_normal_enemy		jsr move_enemy
+_enemy_moved		lda enemy_timer,x
+			beq +++
+				dec enemy_timer,x
+			jmp +++++
++++			lda #EnemyWaiting
+			sta enemy_state,x
+			jsr get_random
+			sta enemy_timer,x
 			jmp +++++
 			; ----------------
 
@@ -7888,11 +7940,16 @@ enemy_timeout_jmp
 				dec enemy_timer,x
 				jmp +++++
 +++
-			ldy CurrentMobType,x
+			ldy CurrentMobTypes,x
 			lda mob_contour_table,y
 			sta color+enemy,x
+			jsr get_random
+			sta enemy_timer,x
 			lda #EnemyMoving
 			sta enemy_state,x
+			ldy CurrentMobTypes,x
+			and num_dirs_table,y
+			sta enemy_dir,x
 			jmp +++++
 			; ----------------
 
@@ -7918,7 +7975,6 @@ enemy_timeout_jmp
 			; Time of death, changing state
 			; ------------------------------
 			jsr get_random
-			lda RandomNumber
 			and #3
 			beq +++
 				; Spawn some loot
@@ -7955,209 +8011,388 @@ enemy_timeout_jmp
 		rts
 ; ------------------------------------------------------------------------------------
 
+check_player_looting_enemy
 
-; ------------------------------------------------------------------------------------
-; move_enemy
+		; ------------------
+		; Heart
+		; ------------------
+		cmp #f_heart	; heart
+		bne +++
+			lda #1
+			jsr increase_hp
+			inc StatsUpdated
+		jmp ++
+		; ------------------
++++
+		; ------------------
+		; Gold
+		; ------------------
+		cmp #f_gold	; gold
+		bne +++
+
+			jsr get_random
+			and #3
+			clc
+			adc enemy_gold,x
+			jsr increase_gold
+			inc StatsUpdated
+
+		jmp ++
+		; ------------------
++++
+		; ------------------
+		; Potions
+		; ------------------
+		cmp #f_potion
+		bne +++
+			; TODO: add potions
+			jmp ++
+		; ------------------
++++
+		; ------------------
+		; Arrows
+		; ------------------
+		cmp #f_arrows
+		bne +++
+			; TODO: add arrows
+			jmp ++
+		; ------------------+++
++++
+		; ------------------
+		; Sword
+		; ------------------
+		cmp #f_sword
+		bne +++
+			lda InvSword
+			sta WeaponList
+			inc WeaponListLen
+			inc SelWeapon
+			jmp ++
+		; ------------------
++++
+		rts
+		; ------------------
+		; TODO: More loot
+		; ------------------
+		; ------------------
+++
+		; Set enemy as dead (looted)
+		lda #$40
+		sta enemy+frame,x
+
+		; Reset position
+		lda #0
+		sta enemy+xtablelo,x
+		sta enemy+xtablehi,x
+		sta enemy+ytable,x
+
+		; Leave as dead
+		lda #EnemyDead
+		sta enemy_state,x
+		; ------------------
+
++		rts
+
+
 ; ------------------------------------------------------------------------------------
 move_enemy
-		stx tmp4
-
-		lda CurrentMobType,x
-		tax
+		ldy CurrentMobTypes,x
+		sty CurrentMobType
 
 		; determine movement speed
-		lda mobtable_speed,x
+		lda mobtable_speed,y
 		lsr
 
 		; assume that speed = 0 is forbidden.
 		; if a == 0 then:
 		bne +
 			lda AnimCounter
-			and #$01	; Achieve subpixel accuracy
+			and #$01	; Achieve subpixel accuracy by counting on every second frame :-)
 		; end if
 +		sta CurrentMobSpeed
-		ldx tmp4
 
-		; convert to sprite coordinate x
-		lda enemy_nextpos_x,x
-		clc
-		asl
-		asl
-		asl
-		asl
-		adc #xoffset
-		sta tmp2
-		lda #0
-		rol
-		sta tmp3
-
-		; convert to sprite coordinate y
-		lda enemy_nextpos_y,x
-		clc
-		asl
-		asl
-		asl
-		asl
-		adc #yoffset
-
-		; Check enemy y sprite coordinate
-		; --------------------------------------------------------------------
-
-		cmp ytable+enemy,x	; Check the y coordinate
-		bne +
-		jmp +++		; Go check also the x coordinates
-+
-		bcc +	; jump if next y < curr y
-
-			; ******   next y > curr y   ******
-			inx
-			inx
-			jsr get_tile_below_sprite
-			cmp #16
-			bcc ++
-
-				; Enemy has tile below sprite => Go idle and wait to make a decision.
-				ldx tmp4
-
-				lda #EnemyWaiting
-				sta enemy_state,x
-				jsr get_random
-				lda RandomNumber
-				lsr
-				sta enemy_timer,x
-				rts			; return
-
-++
-				ldx tmp4
-
-				lda ytable+enemy,x
-				clc
-				adc CurrentMobSpeed
-				sta ytable+enemy,x
-				lda #EnemyRunSouth
-				sta enemy_anim_state,x
-				rts
-+
-			; ******   next y < curr y   ******
-			inx
-			inx
-			jsr get_tile_above_sprite
-			cmp #16
-			bcc ++
-				; TODO: Keep this shortcut?
-				ldx tmp4
-				jmp +++	; Check also x sprite coordinates before taking a new course.
-
-				; Enemy has tile above sprite => Go idle and wait to make a decision.
-				ldx tmp4
-
-				lda #EnemyWaiting
-				sta enemy_state,x
-				jsr get_random
-				lda RandomNumber
-				lsr
-				sta enemy_timer,x
-				rts			; return
-
-++
-				ldx tmp4
-
-				lda ytable+enemy,x
-				sec
-				sbc CurrentMobSpeed
-				sta ytable+enemy,x
-				lda #EnemyRunNorth
-				sta enemy_anim_state,x
-				rts			; return
-
-		; Check enemy x sprite coordinate
-		; --------------------------------------------------------------------
-+++
-
-		lda tmp3
-		cmp xtablehi+enemy,x
-		bne +
-		lda tmp2
-		cmp xtablelo+enemy,x
-		bne +
-		
-			; Enemy has reached destination
-			lda #EnemyWaiting
-			sta enemy_state,x
-			jsr get_random
-			lda RandomNumber
-			lsr
-			sta enemy_timer,x
-			rts			; return
-+
-		bcc +	; jump if next x < curr x
-
-			; ******   next x > curr x   ******
-			inx
-			inx
-			jsr get_tile_right_of_sprite
-			cmp #16
-			bcc ++
-
-				; Enemy has tile right of sprite => Go idle and wait to make a decision.
-				ldx tmp4
-
-				lda #EnemyWaiting
-				sta enemy_state,x
-				jsr get_random
-				lda RandomNumber
-				lsr
-				sta enemy_timer,x
-				rts		; return
-
-++
-				ldx tmp4
-
-				lda xtablelo+enemy,x
-				clc
-				adc CurrentMobSpeed
-				sta xtablelo+enemy,x
-				lda xtablehi+enemy,x
-				adc #0
-				sta xtablehi+enemy,x
-				lda #EnemyRunEast
-				sta enemy_anim_state,x
-				rts
-+
-			; ******   next x < curr x   ******
+		; Move in the stored direction
+		stx tmp4		; store enemy (sprite) index
+		ldy enemy_dir,x
+		sty CurrentEnemyDir
+		lda move_enemy_dir_x,y
+		beq ++
+		bpl +
+			ldy CurrentMobType	; fetch mob type
+			cpy #4		; if this bit is set, then no tile checks will be made
+			bcs me__skip_lt_chk	; if y >= 4 then goto me__skip_lt_chk
 			inx
 			inx
 			jsr get_tile_left_of_sprite
-			cmp #16
-			bcc ++
-
-				; Enemy has tile left of sprite => Go idle and wait to make a decision.
-				ldx tmp4
-
-				lda #EnemyWaiting
-				sta enemy_state,x
-				jsr get_random
-				lda RandomNumber
-				lsr
-				sta enemy_timer,x
-				rts			; return
-
-++
-				ldx tmp4
-
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving
+me__skip_lt_chk		ldx tmp4
+			lda xtablehi+enemy,x
+			bne +++
 				lda xtablelo+enemy,x
-				sec
-				sbc CurrentMobSpeed
-				sta xtablelo+enemy,x
-				lda xtablehi+enemy,x
-				sbc #0
-				sta xtablehi+enemy,x
-				lda #EnemyRunWest
-				sta enemy_anim_state,x
-				rts			; return
+				cmp #xoffset+24
+				bcc _enemy_stop_moving
++++			jsr move_enemy_left
+			lda #EnemyRunWest
+			sta FinalEnemyAnimState
+			jmp ++
 
++			ldy CurrentMobType	; fetch mob type
+			cpy #4		; if this bit is set, then no tile checks will be made
+			bcs me__skip_rt_chk	; if y >= 4 then goto me__skip_rt_chk
+			inx
+			inx
+			jsr get_tile_right_of_sprite
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving
+me__skip_rt_chk		ldx tmp4
+			lda xtablehi+enemy,x
+			beq ++++
+				lda xtablelo+enemy,x
+				cmp #xoffset+16
+				bcs _enemy_stop_moving
+++++			jsr move_enemy_right
+			lda #EnemyRunEast
+			sta FinalEnemyAnimState
+			jmp ++
+; ---------------
+check_enemy_blocking_tile
+		; Check if enemy ran into a blocking tile.
+		tay
+		lda collision_map,y
+		cmp #ct_block	; if carry is set, then enemy has run into a blocking tile.
+		bcs +
+		lda #0
+		rts
++		lda #1
+		rts
+; ---------------
+_enemy_stop_moving
+		; Enemy ran into a tile => Go idle and wait to make a decision.
+		ldx tmp4
+
+		lda #EnemyIdle
+		sta enemy_state,x
+		;jsr get_random
+		;lsr
+		;sta enemy_timer,x
+		rts			; return
+; ---------------
+++		ldy CurrentEnemyDir
+		lda move_enemy_dir_y,y
+		beq +++
+		bpl +
+			ldy CurrentMobType
+			cpy #4
+			bcs me__skip_up_chk	; if y >= 4 then goto me__skip_up_chk
+			inx
+			inx
+			jsr get_tile_above_sprite
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving
+me__skip_up_chk		ldx tmp4
+			lda ytable+enemy,x
+			cmp #yoffset+16
+			bcc _enemy_stop_moving
+			jsr move_enemy_up
+			lda #EnemyRunNorth
+			sta FinalEnemyAnimState
+			jmp +++
+
++			ldy CurrentMobType
+			cpy #4
+			bcs me__skip_dn_chk	; if y >= 4 then goto me__skip_dn_chk
+			inx
+			inx
+			jsr get_tile_below_sprite
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving
+me__skip_dn_chk		ldx tmp4
+			lda ytable+enemy,x
+			cmp #yoffset+160
+			bcs _enemy_stop_moving
+			jsr move_enemy_down
+			lda #EnemyRunSouth
+			sta enemy_anim_state,x
+			rts
++++
+			lda FinalEnemyAnimState
+			sta enemy_anim_state,x
+			rts
+
+move_enemy_dir_x
+		; 4 values; south, west, north, east, southeast, southwest, northwest, northeast
+		!byte 0, 255, 0, 1, 1, 255, 255, 1
+move_enemy_dir_y
+		!byte 1, 0, 255, 0, 1, 1, 255, 255
 ; ------------------------------------------------------------------------------------
 
+
+; ------------------------------------------------------------------------------------
+; move_boss_2x2
+; ------------------------------------------------------------------------------------
+move_boss_2x2
+		ldy CurrentMobTypes,x
+
+		; determine movement speed
+		lda mobtable_speed,y
+		lsr
+
+		; assume that speed = 0 is forbidden.
+		; if a == 0 then:
+		bne +
+			lda AnimCounter
+			and #$01	; Achieve subpixel accuracy by counting on every second frame :-)
+		; end if
++		sta CurrentMobSpeed
+
+		; Move in the stored direction
+		stx tmp4		; store enemy (sprite) index
+		stx tmp3
+		ldy enemy_dir,x
+		lda move_enemy_dir_x,y
+		beq ++
+		bpl +
+		ldy #4
+-			inx
+			inx
+			jsr get_tile_left_of_sprite
+			jsr check_enemy_blocking_tile_b1
+			bne _enemy_stop_moving_b1
+			ldx tmp4
+			lda xtablehi+enemy,x
+			bne +++
+				lda xtablelo+enemy,x
+				cmp #xoffset+24
+				bcc _enemy_stop_moving_b1
++++			jsr move_enemy_left
+			inx
+			inx
+			stx tmp4
+			dey
+			bne -
+		lda #EnemyRunWest
+		jmp +++
+
++		ldy #4
+-			inx
+			inx
+			jsr get_tile_right_of_sprite
+			jsr check_enemy_blocking_tile_b1
+			bne _enemy_stop_moving_b1
+			ldx tmp4
+			lda xtablehi+enemy,x
+			beq ++++
+				lda xtablelo+enemy,x
+				cmp #xoffset+16
+				bcs _enemy_stop_moving_b1
+++++			jsr move_enemy_right
+			inx
+			inx
+			stx tmp4
+			dey
+			bne -
+		lda #EnemyRunEast
+		jmp +++
+; ---------------
+check_enemy_blocking_tile_b1
+		; Check if enemy ran into a blocking tile.
+		tay
+		lda collision_map,y
+		cmp #ct_block	; if carry is set, then enemy has run into a blocking tile.
+		bcs +
+		lda #0
+		rts
++		lda #1
+		rts
+; ---------------
+_enemy_stop_moving_b1
+		; Enemy ran into a tile => Go idle and wait to make a decision.
+		ldx tmp3
+
+		lda #EnemyIdle
+		sta enemy_state,x
+		;jsr get_random
+		;lsr
+		;sta enemy_timer,x
+		rts			; return
+; ---------------
+++
+		lda move_enemy_dir_y,y
+		beq +++
+		bpl +
+		ldy #4
+-			inx
+			inx
+			jsr get_tile_above_sprite
+			jsr check_enemy_blocking_tile_b1
+			bne _enemy_stop_moving_b1
+			ldx tmp4
+			lda ytable+enemy,x
+			cmp #yoffset+16
+			bcc _enemy_stop_moving_b1
+			jsr move_enemy_up
+			inx
+			inx
+			stx tmp4
+			dey
+			bne -
+		lda #EnemyRunNorth
+		jmp +++
+
++		ldy #4
+-			inx
+			inx
+			jsr get_tile_below_sprite
+			jsr check_enemy_blocking_tile_b1
+			bne _enemy_stop_moving_b1
+			ldx tmp4
+			lda ytable+enemy,x
+			cmp #yoffset+160
+			bcs _enemy_stop_moving_b1
+			jsr move_enemy_down
+			inx
+			inx
+			stx tmp4
+			dey
+			bne -
+		lda #EnemyRunSouth
++++
+		ldx tmp3
+		sta enemy_anim_state,x
+		rts
+
+; ------------------------------------------------------------------------------------
+move_enemy_left
+		lda xtablelo+enemy,x		; Subtract from sprite X coordinate
+		sec
+		sbc CurrentMobSpeed
+		sta xtablelo+enemy,x
+		lda xtablehi+enemy,x
+		sbc #0
+		sta xtablehi+enemy,x
+		rts
+move_enemy_right
+		lda xtablelo+enemy,x
+		clc
+		adc CurrentMobSpeed		; Add to sprite X coordinate
+		sta xtablelo+enemy,x
+		lda xtablehi+enemy,x
+		adc #0
+		sta xtablehi+enemy,x
+		rts
+move_enemy_up
+		lda ytable+enemy,x		; Subtract from sprite Y coordinate
+		sec
+		sbc CurrentMobSpeed
+		sta ytable+enemy,x
+		rts
+move_enemy_down
+		lda ytable+enemy,x
+		clc
+		adc CurrentMobSpeed		; Add to sprite Y coordinate
+		sta ytable+enemy,x
+		rts
 
 ; ------------------------------------------------------------------------------------
 ; enemy_attack
@@ -8232,7 +8467,7 @@ enemy_attack
 		beq +
 		lda #EnemyWaiting
 		sta enemy_state,x
-		lda RandomNumber
+		jsr get_random
 		lsr
 		sta enemy_timer,x
 		rts
@@ -8322,6 +8557,114 @@ player_start_attack
 		sta frame+weapon
 		lda player_weapon_frames,x
 		sta frame+weapon+16
+		rts
+
+;-----------------------------------------------------------
+; draw_stats - show a stats bar on the top - use chars
+; parameters: -
+; return value: -
+; destroys: a, x, y, C, Z, N
+;-----------------------------------------------------------
+draw_stats
+		clc
+		lda #1
+		ldx #39	; set status text to white color
+-		sta $dbc0,x
+		dex
+		bne -
+		sta $dbc0
+
+		lda #txt_sp	; set whitespace (clear) status bar
+		ldx #39
+-		sta $43c0,x
+		dex
+		bne -
+		sta $43c0
+
+		lda #txt_heart
+		sta $43c2
+		lda #2
+		sta $dbc2
+
+		ldx #0
+		clc
+		lda player_hp
+		beq +
+			adc #num_start
+			sta $43c4,x
+			inx
++
+		lda player_hp+1
+		clc
+		adc #num_start
+		sta $43c4,x
+		inx
+
+		lda #txt_slash
+		sta $43c4,x
+		inx
+
+		lda player_max_hp
+		beq +
+			clc
+			adc #num_start
+			sta $43c4,x
+			inx
++
+		lda player_max_hp+1
+		clc
+		adc #num_start
+		sta $43c4,x
+
+		lda #txt_key
+		sta $43ca
+		lda #7
+		sta $dbca
+
+		lda #num_start
+		sta $43cc
+
+		lda #15
+		sta $dbd0
+		lda #txt_coin
+		sta $43d0
+
+		ldx #0
+		lda player_gold
+		beq +
+			clc
+			adc #num_start
+			sta $43d2,x
+			inx
++		lda player_gold+1
+		bne ++
+		cpx #0
+		beq +
+++			clc
+			adc #num_start
+			sta $43d2,x
+			inx
++		lda player_gold+2
+		bne ++
+		cpx #0
+		beq +
+++			clc
+			adc #num_start
+			sta $43d2,x
+			inx
++		lda player_gold+3
+		bne ++
+		cpx #0
+		beq +
+++			clc
+			adc #num_start
+			sta $43d2,x
+			inx
++		lda player_gold+4
+		clc
+		adc #num_start
+		sta $43d2,x
+
 		rts
 
 ;-----------------------------------------------------------
