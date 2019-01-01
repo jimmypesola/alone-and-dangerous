@@ -258,7 +258,7 @@ mobs_entries
 ;          9 - spider   (purple - hard)
 ;          a - skeleton (purple - hard)
 ;          b - knight   (purple - hard)
-;          c - slime    (orange - extreme)
+;          c - bat      (black - easy)	(moves in 8 directions)
 ;          d - spider   (orange - extreme)
 ;          e - skeleton (orange - extreme)
 ;          f - knight   (orange - extreme)
@@ -290,8 +290,6 @@ grp_4x_greenspiders
 ; $07
 grp_4x_greenslimes
 		!byte $01,$00,$04
-
-
 ; $08
 grp_1x_greenskelly
 		!byte $01,$02,$01
@@ -299,25 +297,23 @@ grp_1x_greenskelly
 grp_1x_greenslime
 		!byte $01,$00,$01
 ; $0a
-grp_6x_greenslime
-		!byte $01,$00,$06
-; $0b
 grp_6x_greenspiders
 		!byte $01,$01,$06
-; $0c
+; $0b
 grp_2x_greenslime
 		!byte $01,$00,$02
+; $0c
+grp_2x_rat
+		!byte $01,$01,$02
 ; $0d
-grp_1x_npc_0	!byte $01,$80,$01
-
+grp_6x_bats
+		!byte $01,$0c,$06
 ; $0e
-grp_2x_rat	!byte $01,$01,$02
-
+grp_0e_not_used
+		!byte $00,$00,$00
 ; $0f
-grp_6x_bats	!byte $01,$20,$06
-
-; $40
-grp_1x_ratboss	!byte $01,$40,$01
+grp_1x_ratboss
+		!byte $01,$0f,$01
 
 
 
@@ -335,9 +331,9 @@ world
 		; mobs_entries references, see mobs_entries table above. (not mob_entries_list)
 
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
-		!byte $0e,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
-		!byte $0e,$00,$0f,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
+		!byte $00,$00,$0f,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
+		!byte $0d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
+		!byte $0c,$00,$0d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
@@ -476,7 +472,14 @@ BossFrames2x3
 		; BOSS 2x3 frame sprites (2 extra sprites per frame, lowest row) (8 x 2x3 sprites), 16 bytes
 
 		; Padding 16 bytes (no boss frames)
-		!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+		!byte f_rat_boss+18,f_rat_boss+18	; frame 0
+		!byte f_rat_boss+18,f_rat_boss+18	; frame 1
+		!byte f_rat_boss+18,f_rat_boss_claw	; frame 2
+		!byte f_rat_boss+18,f_rat_boss+18	; frame 3
+		!byte f_death,f_death			; frame 4
+		!byte f_death+1,f_death+1		; frame 5
+		!byte f_death+2,f_death+2		; frame 6
+		!byte f_death+3,f_death+3		; frame 7
 
 		; man, boy, woman, girl
 NpcImageList	!byte f_man,f_boy,f_woman,f_girl
@@ -485,34 +488,34 @@ NpcImageList	!byte f_man,f_boy,f_woman,f_girl
 ; hp array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
 mobtable_hp
 		!byte $02,$04,$0a,$14,$05,$08,$14,$1e
-		!byte $0a,$0e,$1e,$28,$14,$1e,$32,$50
+		!byte $0a,$0e,$1e,$28,$02,$02,$02,$32
 
 ; ap array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
 mobtable_ap
 		!byte $01,$01,$02,$04,$02,$02,$04,$08
-		!byte $04,$04,$08,$16,$08,$08,$16,$32
+		!byte $04,$04,$08,$16,$01,$08,$16,$32
 
 ; gold array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
 mobtable_gold
 		!byte $01,$04,$10,$15,$12,$15,$20,$25
-		!byte $15,$20,$25,$30,$25,$40,$75,$96
+		!byte $15,$20,$25,$30,$00,$40,$75,$96
 
 ; loot index array of mobtypes [slime1, spider1, skel1, knight1, slime2, spider2, ... etc]
 mobtable_lootidx
 		!byte $00,$01,$02,$03,$00,$04,$05,$06
-		!byte $07,$08,$09,$0a,$0b,$0c,$0d,$0e
+		!byte $07,$08,$09,$0a,$00,$0c,$0d,$0e
 
 ; subpixel speed ratio is 1/2; 1 = 0.5, 2 = 1, etc...
 mobtable_speed	!byte $01,$02,$01,$01,$01,$02,$02,$02
-		!byte $02,$03,$02,$02,$02,$04,$02,$02
+		!byte $02,$03,$02,$02,$01,$04,$02,$02
 
 ; mob colors
 mob_fill_table
 		!byte $06,$0b,$00,$0f,$0e,$01,$00,$0e
-		!byte $0a,$01,$00,$04,$07,$01,$00,$08
+		!byte $0a,$01,$00,$04,$02,$01,$00,$0f
 mob_contour_table
-		!byte $00,$00,$01,$00,$06,$06,$03,$00
-		!byte $04,$04,$04,$00,$08,$08,$08,$00
+		!byte $00,$00,$01,$00,$0a,$06,$03,$00
+		!byte $04,$04,$00,$04,$00,$08,$00,$00
 npc_fill_table
 		!byte $05,$0e
 npc_contour_table

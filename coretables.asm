@@ -3,6 +3,7 @@
 
 ; game core specific data
 		*=$f000
+coretables_begin
 
 ;------------------------------------------------------------------------------------
 ; Kernal area variables [$f000-$fffd], use this space to save on load memory
@@ -69,7 +70,7 @@ tilepos_lo
 		!byte $e8,$ea,$ec,$ee,$f0,$f2,$f4,$f6,$20,$22,$24,$26,$28,$2a,$2c,$2e
 		!byte $30,$32,$34,$36,$38,$3a,$3c,$3e,$40,$42,$44,$46,$70,$72,$74,$76
 		!byte $78,$7a,$7c,$7e,$80,$82,$84,$86,$88,$8a,$8c,$8e,$90,$92,$94,$96
-tilepos_hi_a
+tilepos_hi
 		!byte $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40
 		!byte $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40
 		!byte $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40
@@ -85,23 +86,6 @@ tilepos_hi_a
 		!byte $42,$42,$42,$42,$42,$42,$42,$42,$43,$43,$43,$43,$43,$43,$43,$43
 		!byte $43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43
 		!byte $43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43,$43
-
-tilepos_hi_b
-		!byte $44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44
-		!byte $44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44
-		!byte $44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44
-		!byte $44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44,$44
-		!byte $44,$44,$44,$44,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45
-		!byte $45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45
-		!byte $45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45
-		!byte $45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45,$45
-		!byte $45,$45,$45,$45,$45,$45,$45,$45,$46,$46,$46,$46,$46,$46,$46,$46
-		!byte $46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46
-		!byte $46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46
-		!byte $46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46,$46
-		!byte $46,$46,$46,$46,$46,$46,$46,$46,$47,$47,$47,$47,$47,$47,$47,$47
-		!byte $47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47
-		!byte $47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47,$47
 
 colormem_hi
 		!byte $d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8,$d8
@@ -202,9 +186,9 @@ plr_r_last_tilepos
 plr_r_last_tileidx
 		!byte $00
 
-; --------------------------------------------
+; ------------------------------------------------
 ; Player's start location position arrays per map
-; --------------------------------------------
+; ------------------------------------------------
 ; player's starting pos in tiles
 StartLocX	!byte 8,30,0,0,0,0,0,0
 StartLocY	!byte 91,34,0,0,0,0,0,0
@@ -284,31 +268,7 @@ pc_target_list_d7
 		!byte $ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff
 
-; These tables below are for animating loot "jumping" out of a chest when opened.
-; - Formula for this is: let f = frame index; sprite_y = sprite_y + move_table[f] - sine_table[f]
-; - Sine table can have more uses, like rotating movement simulation, or bouncing effect. Max offsets are exactly 1 tile vertically or horizontally, in both arrays.
-
-sine_table	; 50 bytes sine table
-		!byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$09,$0a,$0b,$0c,$0c,$0d
-		!byte $0e,$0e,$0e,$0f,$0f,$0f,$10,$10,$10,$10,$10,$10,$10,$0f,$0f,$0f
-		!byte $0e,$0e,$0e,$0d,$0c,$0c,$0b,$0a,$09,$09,$08,$07,$06,$05,$04,$03
-		!byte $02,$01
-
-move_table	; 50 bytes move south table
-		!byte $00,$00,$00,$00,$00,$01,$01,$01,$02,$02,$02,$03,$03,$03,$04,$04
-		!byte $04,$05,$05,$05,$06,$06,$06,$07,$07,$07,$08,$08,$08,$09,$09,$09
-		!byte $0a,$0a,$0a,$0b,$0b,$0c,$0c,$0c,$0d,$0d,$0d,$0e,$0e,$0e,$0f,$0f
-		!byte $0f,$0f
-
-num_dirs_table	!byte $03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03
-		!byte $03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+num_dirs_table	!byte $03,$03,$03,$03,$03,$03,$03,$03,$07,$07,$07,$07,$07,$07,$03,$03
 
 fadeout_colors_bg_border
 		!byte $00,$00,$00,$00,$09,$09,$09,$09
@@ -322,10 +282,21 @@ gradient_fader
 damage_flash
 		!byte $07,$07,$02,$02
 
-boss_loc_array	; Each world/dungeon has up to two bosses. This array defines room and tile position of each boss.
-		; It is checked each time a room is entered, and the location matches the room position and position within the room (2nd byte).
-		; When a boss is defeated, its position shall be set to $ff permanently so it won't appear again.
-		;    Room,Tile		  Map
+
+; Tables indexed by this direction list: 0=south, 1=west, 2=north, 3=east
+player_x_force_by_dir
+		!byte $00,$06,$00,$fa	; push force affecting player will be opposite of his/her direction
+player_y_force_by_dir
+		!byte $fa,$00,$06,$00
+enemy_x_force_by_dir
+		!byte $00,$fa,$00,$06	; push force affecting enemy will be opposite of his/her direction
+enemy_y_force_by_dir
+		!byte $06,$00,$fa,$00
+
+; Each world/dungeon has up to two bosses. This array defines room and tile position of each boss.
+; It is checked each time a room is entered, and the location matches the room position and position within the room (2nd byte).
+; When a boss is defeated, its position shall be set to $ff permanently so it won't appear again.
+boss_loc_array	;    Room,Tile		  Map
 		!byte $ff,$ff,$ff,$ff	; outdoor world
 		!byte $02,$30,$ff,$ff	; dungeon 0
 		!byte $ff,$ff,$ff,$ff	; dungeon 1
