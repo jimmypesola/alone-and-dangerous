@@ -300,15 +300,7 @@ move_table	; 50 bytes move south table
 		!byte $0a,$0a,$0a,$0b,$0b,$0c,$0c,$0c,$0d,$0d,$0d,$0e,$0e,$0e,$0f,$0f
 		!byte $0f,$0f
 
-num_dirs_table	!byte $03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03
-		!byte $03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03,$03
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
-		!byte $07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07,$07
+num_dirs_table	!byte $03,$03,$03,$03,$03,$03,$03,$03,$07,$07,$07,$07,$07,$07,$03,$03
 
 fadeout_colors_bg_border
 		!byte $00,$00,$00,$00,$09,$09,$09,$09
@@ -321,6 +313,18 @@ gradient_fader
 		!byte $08,$0f,$0c,$0e,$0e,$0e,$08,$0d
 damage_flash
 		!byte $07,$07,$02,$02
+
+
+; Tables indexed by this direction list: 0=south, 1=west, 2=north, 3=east
+player_x_force_by_dir
+		!byte $00,$06,$00,$fa	; push force affecting player will be opposite of his/her direction
+player_y_force_by_dir
+		!byte $fa,$00,$06,$00
+enemy_x_force_by_dir
+		!byte $00,$fa,$00,$06	; push force affecting enemy will be opposite of his/her direction
+enemy_y_force_by_dir
+		!byte $06,$00,$fa,$00
+
 
 boss_loc_array	; Each world/dungeon has up to two bosses. This array defines room and tile position of each boss.
 		; It is checked each time a room is entered, and the location matches the room position and position within the room (2nd byte).
