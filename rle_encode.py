@@ -42,7 +42,7 @@ def read_binary_file(filename):
 
     byte_array = []
     for i in range(len(data)):
-        byte_array.append(ord(data[i]))
+        byte_array.append(data[i])
 
     infile.close()
     return byte_array
@@ -78,11 +78,11 @@ def remap_to_room_chunks(byte_array):
                 for i in range(ROOM_WIDTH):
                     idx = y*MAP_STRIDE + x*ROOM_WIDTH + j*MAP_WIDTH * ROOM_WIDTH + i
                     if DEBUG:
-                        print "Setting data [%d,%d] for room at index %d..." % (i, j, idx)
+                        print("Setting data [%d,%d] for room at index %d..." % (i, j, idx))
                     current_room_tiles.append(byte_array[idx])
 
             if DEBUG:
-                print "Added room [%d,%d] at index %d" % (x, y, y*MAP_STRIDE + x*ROOM_WIDTH)
+                print("Added room [%d,%d] at index %d" % (x, y, y*MAP_STRIDE + x*ROOM_WIDTH))
 
             room_chunk_array.extend(current_room_tiles)
 
@@ -161,15 +161,15 @@ def print_compressed_rooms(compressed_chunks):
     pos = 0                     # Iterating index over the compressed chunks array
     column_index = 0            # Just for pretty printing
     room_coord = 0              # Keeps track of the room coordinate within the compressed chunk array
-    while pos<len(compressed_chunks):
+    while (pos<len(compressed_chunks)):
         if compressed_bytes_left == 0:
             compressed_bytes_left = compressed_chunks[pos]
             if DEBUG:
-                print "\n\nRoom [%d, %d]\n   Length: %d" % (room_coord%16, int(room_coord/16), compressed_bytes_left)
+                print("\n\nRoom [%d, %d]\n   Length: %d" % (room_coord%16, int(room_coord/16), compressed_bytes_left))
             if compressed_bytes_left == 0:
                 pos += ROOM_SIZE    # Skips the room entirely in case room was not compressed
                 if DEBUG:
-                    print "Uncompressed data won't be printed."
+                    print("Uncompressed data won't be printed.")
             room_coord += 1 # Increment only when the data for one room has been processed
             column_index = 0
         else:
@@ -202,7 +202,7 @@ def encode_with_dictionary(indices, compressed_room_array):
 
     for idx in range(len(indices)):
 
-        #print "Reading old dictionary at index: %d" % idx
+        #print("Reading old dictionary at index: %d" % idx)
 
         pos = indices[idx]
         pos_len = compressed_room_array[pos]
@@ -212,7 +212,7 @@ def encode_with_dictionary(indices, compressed_room_array):
             pos_len = ROOM_SIZE
         pos += 1
 
-        #print "   Found data at index [%d] with length [%d]." % (idx, pos_len)
+        #print("   Found data at index [%d] with length [%d]." % (idx, pos_len))
 
         match = False
         pos_end = pos + pos_len
@@ -222,17 +222,17 @@ def encode_with_dictionary(indices, compressed_room_array):
         #for item in data_slice:
         #    output += "%03d " % item
 
-        #print "Data Slice: %s" % output
+        #print("Data Slice: %s" % output)
 
         for idx_lookup in range(len(dictionary)):
 
-            #print "Checking new dictionary for equal slices at index: %d" % dictionary[idx_lookup]
+            #print("Checking new dictionary for equal slices at index: %d" % dictionary[idx_lookup])
 
             pos_lookup = dictionary[idx_lookup]
             lookup_len = optimized_room_array[pos_lookup]
             pos_lookup += 1
 
-            #print "   Found data at index [%d] with length[%d]" % (dictionary[idx_lookup], lookup_len)
+            #print("   Found data at index [%d] with length[%d]" % (dictionary[idx_lookup], lookup_len))
 
             pos_lookup_end = pos_lookup + lookup_len
             dict_slice = optimized_room_array[pos_lookup:pos_lookup_end]
@@ -241,14 +241,14 @@ def encode_with_dictionary(indices, compressed_room_array):
             #for item in dict_slice:
             #    output += "%03d " % item
 
-            #print "Dictionary slice: %s" % output
+            #print("Dictionary slice: %s" % output)
 
             if are_equal(data_slice, dict_slice):
 
                 if DEBUG:
                     # Inform of adding reference to dictionary
-                    print "\nSuccessful match of %d bytes at position %d!" % (lookup_len, pos_lookup)
-                    print " >>>>> Set dictionary pos [%d, %d] to refer to repeated position [%d]" % (x % MAP_WIDTH, int(x/MAP_WIDTH), dictionary[idx_lookup])
+                    print("\nSuccessful match of %d bytes at position %d!" % (lookup_len, pos_lookup))
+                    print(" >>>>> Set dictionary pos [%d, %d] to refer to repeated position [%d]" % (x % MAP_WIDTH, int(x/MAP_WIDTH), dictionary[idx_lookup]))
 
                 # Push to dictionary
                 dictionary.append(dictionary[idx_lookup])
@@ -259,13 +259,13 @@ def encode_with_dictionary(indices, compressed_room_array):
         # Push new data to destination compressed array.
         if not match:
             if DEBUG:
-                print "\nAdding %d items to compressed array..." % len(data_slice)
+                print("\nAdding %d items to compressed array..." % len(data_slice))
             new_pos = len(optimized_room_array)
             optimized_room_array.append(pos_len)
             optimized_room_array.extend(data_slice)
 
             if DEBUG:
-                print " ----- Set dictionary pos [%d, %d] to refer to new position [%d]" % (x % MAP_WIDTH, int(x/MAP_WIDTH), new_pos)
+                print(" ----- Set dictionary pos [%d, %d] to refer to new position [%d]" % (x % MAP_WIDTH, int(x/MAP_WIDTH), new_pos))
 
             # Push to dictionary
             dictionary.append(new_pos)
@@ -301,8 +301,8 @@ def main():
     filename = ""
     outfile = C_RLEFILE_NAME
     if len(sys.argv) < 2:
-        print "Input file name is mandatory!"
-        print "Usage: %s <infile> <outfile>" % sys.argv[0]
+        print("Input file name is mandatory!")
+        print("Usage: %s <infile> <outfile>" % sys.argv[0])
         return 1
     elif len(sys.argv) == 2:
         filename = sys.argv[1]  # It can also be passed as one argument to the script
@@ -310,37 +310,37 @@ def main():
         filename = sys.argv[1]
         outfile = sys.argv[2]   # Output file name as third argument
     else:
-        print "Too many arguments passed to script!"
-        print "Usage: %s <infile> <outfile>" % sys.argv[0]
+        print("Too many arguments passed to script!")
+        print("Usage: %s <infile> <outfile>" % sys.argv[0])
         
 
     # Read the input file
-    print "Read input binary data... : '%s'" % filename
+    print("Read input binary data... : '%s'" % filename)
     byte_array = read_binary_file(filename)
 
     if DEBUG:
         print_byte_array(byte_array)
 
-    print "Reorganizing data of %d bytes..." % len(byte_array)
+    print("Reorganizing data of %d bytes..." % len(byte_array))
     room_chunk_array = remap_to_room_chunks(byte_array)
 
-    print "Compressing data..."
+    print("Compressing data...")
     indices, compressed_chunks = compress_room_chunks(room_chunk_array)
 
     print_compressed_rooms(compressed_chunks)
 
-    print "\n Initial compressed array is %d bytes, with %d indices." % (len(compressed_chunks), len(indices))
-    print "\nCompressing all duplicated rooms..."
+    print("\n Initial compressed array is %d bytes, with %d indices." % (len(compressed_chunks), len(indices)))
+    print("\nCompressing all duplicated rooms...")
     dictionary, optimized_and_compressed_array = encode_with_dictionary(indices, compressed_chunks)
 
     # Do a sanity check of the generation of the dictionary
     if len(dictionary) != MAP_SIZE:
-        print "Dictionary size differs from complete size %d: %d" % (MAP_SIZE, len(dictionary))
+        print("Dictionary size differs from complete size %d: %d" % (MAP_SIZE, len(dictionary)))
     else:
-        print "Dictionary is complete with %d entries" % len(dictionary)
+        print("Dictionary is complete with %d entries" % len(dictionary))
 
-    print "Original binary size is %d bytes." % len(byte_array)
-    print "Fully compressed binary is %d bytes, intermediate compressed binary was %d bytes" % (len(optimized_and_compressed_array), len(compressed_chunks))
+    print("Original binary size is %d bytes." % len(byte_array))
+    print("Fully compressed binary is %d bytes, intermediate compressed binary was %d bytes" % (len(optimized_and_compressed_array), len(compressed_chunks)))
 
     # Add offset of the dictionary's length into the dictionary entries
     offset = len(dictionary)*2
@@ -357,7 +357,7 @@ def main():
                 sys.stdout.write("\n")
         if item > 255:
             sys.stdout.write("Compressed data byte value %d is too big at %d\n" % (item, x))
-    print ""
+    print("")
 
     dictionary_bytes = reencode_dictionary(dictionary)
 
