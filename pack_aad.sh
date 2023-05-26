@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./compile_aad.sh
+./compile_tables.sh
 
 function hex2dec {
 	UCASE=$(echo $1 | tr a-z A-Z)
@@ -116,6 +116,7 @@ DUNGEON_0_TABLES_PRG=d0tables.prg
 
 
 # -- Short file names for 1541 floppy --
+CORE_TABLES_FILE=ct
 OUTDOOR_FILE=od
 OUTDOOR_SPRITES_FILE=ods
 OUTDOOR_CHARSET_FILE=odc
@@ -142,14 +143,20 @@ DUNGEON_7_SPRITES_FILE=d7s
 # This is the packer command which will pack all files into one single compressed binary + initial loader routine.
 # TODO: Later, remove the map + charset attrs + tiles + sprites, replace with intro screen + code
 
+CRUNCHED_LEN_INCFILE=file_lengths.a
+truncate -s 0 $CRUNCHED_LEN_INCFILE
+
 echo =======================================================================
-echo ======================== Main PRG =====================================
+echo ========================== Core Tables ================================
 echo =======================================================================
 
-exomizer sfx basic,$BASEADDR -s 'lda #0 sta $d020' -x 'inc $d020 dec $d020' $MAIN_UNPACKED_PRG,$BASEADDR,,$PARTONE_LEN $MUSIC_BIN@$MUSICLOC $MAIN_UNPACKED_PRG,$PARTTWO_START,$PARTTWO_OFFSET,$PARTTWO_LEN $CHARSET_BIN@$CHARSETLOC $SPRITES_BIN@$SPRITELOC $OUTDOOR_RLE@$MAPLOC $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC $MAIN_UNPACKED_PRG,$PARTTHREE_START,$PARTTHREE_OFFSET,$PARTTHREE_LEN $OUTDOOR_TABLES_PRG,$ODTABLESLOC,,$ODTABLES_LEN $CORE_TABLES_PRG,$CORETABLESLOC,,$CORETABLES_LEN -o $MAIN_PRG
+# -- This command will crunch the core tables machine code file and use the specified load address $0400, decrunched file will be relocated to $f000
+exomizer mem -l 0x0400 $CORE_TABLES_PRG -o $CORE_TABLES_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-	echo 'Packing main file was successful!'
+	SIZE=$(ls -l $CORE_TABLES_FILE | cut -d' ' -f 5)
+	echo "ct_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing core tables file was successful!'
 else
 	echo 'Error!'
 	read
@@ -160,11 +167,13 @@ echo =======================================================================
 echo ======================== Outdoor Tables ===============================
 echo =======================================================================
 
-# -- This command will crunch the main outdoor tables binary file and use the specified load address $a000, decrunched file will be relocated to $e000
-exomizer mem -l 0xa000 $OUTDOOR_TABLES_PRG -o $OUTDOOR_TABLES_FILE
+# -- This command will crunch the main outdoor tables binary file and use the specified load address $0400, decrunched file will be relocated to $e000
+exomizer mem -l 0x0400 $OUTDOOR_TABLES_PRG -o $OUTDOOR_TABLES_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-	echo 'Packing main charset file was successful!'
+	SIZE=$(ls -l $OUTDOOR_TABLES_FILE | cut -d' ' -f 5)
+	echo "od_tables_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing outdoor tables file was successful!'
 else
 	echo 'Error!'
 	read
@@ -176,10 +185,12 @@ echo ======================== Outdoor RLE Map ==============================
 echo =======================================================================
 
 # -- This command will crunch the main outdoor binary map (RLE packed) file and use the specified load address $5000, decrunched files will be relocated to $7000
-exomizer mem -l 0x5000 $OUTDOOR_RLE@0x7000 $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC -o $OUTDOOR_FILE
+exomizer mem -l 0x6ffa $OUTDOOR_RLE@0x7000 $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC -o $OUTDOOR_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-	echo 'Packing main file was successful!'
+	SIZE=$(ls -l $OUTDOOR_FILE | cut -d' ' -f 5)
+	echo "od_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing outdoor RLE map file was successful!'
 else
 	echo 'Error!'
 	read
@@ -194,7 +205,9 @@ echo =======================================================================
 exomizer mem -l 0x4ffe $SPRITES_BIN@0x5000 -o $OUTDOOR_SPRITES_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-	echo 'Packing main sprites file was successful!'
+	SIZE=$(ls -l $OUTDOOR_SPRITES_FILE | cut -d' ' -f 5)
+	echo "od_sprites_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing outdoor sprites file was successful!'
 else
 	echo 'Error!'
 	read
@@ -209,7 +222,9 @@ echo =======================================================================
 exomizer mem -l 0x47fe $CHARSET_BIN@0x4800 -o $OUTDOOR_CHARSET_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-	echo 'Packing main charset file was successful!'
+	SIZE=$(ls -l $OUTDOOR_CHARSET_FILE | cut -d' ' -f 5)
+	echo "od_charset_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing outdoor charset file was successful!'
 else
 	echo 'Error!'
 	read
@@ -225,11 +240,13 @@ echo =======================================================================
 echo ======================== Dungeon 0 Tables =============================
 echo =======================================================================
 
-# -- This command will crunch dungeon 0 tables binary file and use the specified load address $a000, decrunched file will be relocated to $e000
-exomizer mem -l 0xa000 $DUNGEON_0_TABLES_PRG -o $DUNGEON_0_TABLES_FILE
+# -- This command will crunch dungeon 0 tables binary file and use the specified load address $0400, decrunched file will be relocated to $e000
+exomizer mem -l 0x0400 $DUNGEON_0_TABLES_PRG -o $DUNGEON_0_TABLES_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-	echo 'Packing main charset file was successful!'
+	SIZE=$(ls -l $DUNGEON_0_TABLES_FILE | cut -d' ' -f 5)
+	echo "d0_tables_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing dungeon 0 tables file was successful!'
 else
 	echo 'Error!'
 	read
@@ -241,10 +258,12 @@ echo ======================== Dungeon 0 RLE Map ============================
 echo =======================================================================
 
 # -- This command will crunch dungeon 0 binary map (RLE packed) file and use the specified load address $5000, decrunched files will be relocated to $7000
-exomizer mem -l 0x5000 $DUNGEON_0_RLE@0x7000 $DUNGEON_0_CHARSET_ATTRS_BIN@$MAPCOLSLOC $DUNGEON_0_TILES_BIN@$MAPTILESLOC -o $DUNGEON_0_FILE
+exomizer mem -l 0x6ffa $DUNGEON_0_RLE@0x7000 $DUNGEON_0_CHARSET_ATTRS_BIN@$MAPCOLSLOC $DUNGEON_0_TILES_BIN@$MAPTILESLOC -o $DUNGEON_0_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-	echo 'Packing main file was successful!'
+	SIZE=$(ls -l $DUNGEON_0_FILE | cut -d' ' -f 5)
+	echo "d0_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing dungeon 0 map file was successful!'
 else
 	echo 'Error!'
 	read
@@ -259,6 +278,8 @@ echo =======================================================================
 exomizer mem -l 0x4ffe $DUNGEON_0_SPRITES_BIN@0x5000 -o $DUNGEON_0_SPRITES_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
+	SIZE=$(ls -l $DUNGEON_0_SPRITES_FILE | cut -d' ' -f 5)
+	echo "d0_sprites_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
 	echo 'Packing dungeon 0 sprites file was successful!'
 else
 	echo 'Error!'
@@ -274,6 +295,8 @@ echo =======================================================================
 exomizer mem -l 0x47fe $DUNGEON_0_CHARSET_BIN@0x4800 -o $DUNGEON_0_CHARSET_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
+	SIZE=$(ls -l $DUNGEON_0_CHARSET_FILE | cut -d' ' -f 5)
+	echo "d0_charset_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
 	echo 'Packing dungeon 0 charset file was successful!'
 else
 	echo 'Error!'
@@ -287,6 +310,25 @@ fi
 # -- TODO: Add more binary maps here
 #
 
+./compile_aad.sh
+
+echo =======================================================================
+echo ======================== Main PRG =====================================
+echo =======================================================================
+
+exomizer sfx basic,$BASEADDR -s 'lda #0 sta $d020' -x 'inc $d020 dec $d020' $MAIN_UNPACKED_PRG,$BASEADDR,,$PARTONE_LEN $MUSIC_BIN@$MUSICLOC $MAIN_UNPACKED_PRG,$PARTTWO_START,$PARTTWO_OFFSET,$PARTTWO_LEN $CHARSET_BIN@$CHARSETLOC $SPRITES_BIN@$SPRITELOC $OUTDOOR_RLE@$MAPLOC $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC $MAIN_UNPACKED_PRG,$PARTTHREE_START,$PARTTHREE_OFFSET,$PARTTHREE_LEN $OUTDOOR_TABLES_PRG,$ODTABLESLOC,,$ODTABLES_LEN $CORE_TABLES_PRG,$CORETABLESLOC,,$CORETABLES_LEN -o $MAIN_PRG
+RESULT=$?
+if [ $RESULT -eq 0 ]; then
+	echo 'Packing main file was successful!'
+else
+	echo 'Error!'
+	read
+	exit $RESULT
+fi
+
+echo =======================================================================
+echo =======================================================================
+echo =======================================================================
 
 
 c1541 -format "aad,1a" d64 $DISKIMAGE_NAME
@@ -299,13 +341,13 @@ else
 	exit $RESULT
 fi
 
-c1541 -attach $DISKIMAGE_NAME -write $MAIN_PRG -write $OUTDOOR_TABLES_FILE -write $OUTDOOR_FILE -write $OUTDOOR_SPRITES_FILE -write $OUTDOOR_CHARSET_FILE -write $DUNGEON_0_TABLES_FILE -write $DUNGEON_0_FILE -write $DUNGEON_0_SPRITES_FILE -write $DUNGEON_0_CHARSET_FILE
+c1541 -attach $DISKIMAGE_NAME -write $MAIN_PRG -write $CORE_TABLES_FILE -write $OUTDOOR_TABLES_FILE -write $OUTDOOR_FILE -write $OUTDOOR_SPRITES_FILE -write $OUTDOOR_CHARSET_FILE -write $DUNGEON_0_TABLES_FILE -write $DUNGEON_0_FILE -write $DUNGEON_0_SPRITES_FILE -write $DUNGEON_0_CHARSET_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
 	echo 'Writing files to disk was successful!'
-	read
+	#read
 else
 	echo 'Error!'
-	read
+	#read
 	exit $RESULT
 fi

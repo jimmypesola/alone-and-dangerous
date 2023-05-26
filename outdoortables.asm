@@ -152,7 +152,7 @@ doorexitsmulti
 ;		$40-$7f = chests (position, content)
 ;		$80-$bf = destroyable blocks (not stones! they are all breakable.) (position, content)
 ;		$c0-$ef = runestones (spells) (spell number) or triggers when looting an item
-;		$f0-$fe = switches (refers to two-state switchlist table 'switch_lists', max 15 entries) (position ref list ending with $ff)
+;		$f0-$fe = switches (refers to two-state switchlist table 'switch_lists', max 14 entries) (position ref list ending with $ff)
 
 ; notes:        - If $00-$3f but no door nor grass, then reveal a life container instead.
 extensions
@@ -534,5 +534,62 @@ collision_map	!byte $00,$00,$00,$00,$00,$00,$00,$00
 		!byte $00,$00,$00,$00,$00,$00,$00,$00
 		!byte $00,$00,$00,$00,$00,$00,$02,$02
 
-outdoortables_end
+; Everything below is static data
+; ------------------------------------------------
+; Player's start location position arrays per map
+; ------------------------------------------------
+; player's starting pos in tiles
+;
+StartLocX	!byte 8,4,0,0,0,0,0,0
+StartLocY	!byte 91,76,0,0,0,0,0,0
 
+; screen starting pos (left corner) in tiles
+MapStartX	!byte 0,0,0,0,0,0,0,0
+MapStartHiX	!byte 0,0,0,0,0,0,0,0
+MapStartY	!byte 84,72,0,0,0,0,0,0
+
+
+; screen graphics colors per map
+BorderColor	!byte 0
+BGColor		!byte 9
+MultiColor1	!byte 15
+MultiColor2	!byte 11
+
+num_dirs_table	!byte $03,$03,$03,$03,$03,$03,$03,$03,$07,$07,$07,$07,$07,$07,$03,$03
+
+fadeout_colors_bg_border
+		!byte $00,$00,$00,$00,$09,$09,$09,$09
+fadeout_colors_extra_color1
+		!byte $09,$09,$0b,$0b,$0c,$0c,$0f,$0f
+fadeout_colors_extra_color2
+		!byte $09,$09,$09,$09,$0b,$0b,$0b,$0b
+gradient_fader
+		!byte $00,$07,$04,$06,$06,$06,$00,$05
+		!byte $08,$0f,$0c,$0e,$0e,$0e,$08,$0d
+damage_flash
+		!byte $07,$07,$02,$02
+
+
+; Tables indexed by this direction list: 0=south, 1=west, 2=north, 3=east
+player_x_force_by_dir
+		!byte $00,$06,$00,$fa	; push force affecting player will be opposite of his/her direction
+player_y_force_by_dir
+		!byte $fa,$00,$06,$00
+enemy_x_force_by_dir
+		!byte $00,$fa,$00,$06	; push force affecting enemy will be opposite of his/her direction
+enemy_y_force_by_dir
+		!byte $06,$00,$fa,$00
+
+
+
+; --------------------------------------------
+; SFX suite	
+; 		format is: BYTE<8 bits>,BYTE<high 4 bits|low 4 bits>, ...
+;		SFX format:
+;		  <attack|decay>, <systain|release>, <1 byte pulse width (reversed high/low bytes)>,
+;		  <wave form value = [$10,$11,$20,$21,$40,$41,$80,$81]> OR 
+;		  <absolute note value n = [n >$81, n < $c0] >, ...
+sword_swing
+		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
+
+outdoortables_end

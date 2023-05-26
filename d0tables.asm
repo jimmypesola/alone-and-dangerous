@@ -119,7 +119,7 @@ doortable	; e0-ef indicates offset in "doortablemulti". $f0-$fe are dungeons 1-1
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $a0
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $b0
 		!byte $ff,$ff,$ff                                                     ; $c0
-
+; For multiple doors in one room
 doortablemulti
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff
@@ -141,7 +141,7 @@ doorexits	; Exit tile position on *target* screen if door exists on that screen.
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $a0
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $b0
 		!byte $00,$00,$00                                                     ; $c0
-
+; Exits for multiple doors in one room
 doorexitsmulti
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff
@@ -151,7 +151,7 @@ doorexitsmulti
 ;		$40-$7f = chests (position, content)
 ;		$80-$bf = destroyable blocks (not stones! they are all breakable.) (position, content)
 ;		$c0-$ef = runestones (spells) (spell number) or triggers when looting an item
-;		$f0-$fe = switches (refers to two-state switchlist table 'switch_lists', max 15 entries) (position ref list ending with $ff)
+;		$f0-$fe = switches (refers to two-state switchlist table 'switch_lists', max 14 entries) (position ref list ending with $ff)
 
 ; notes:        - If $00-$3f but no door nor grass, then reveal a life container instead.
 extensions
@@ -211,7 +211,10 @@ switch_lists
 ;
 ;		   If AND condition is set to $fe, it will be a toggle switch instead
 ;		   If AND condition is set to $ff, then there is no condition.
-swbase
+;                  If AND condition has the MSB set then it becomes an XOR switch with the switch indicated by its offset value after
+;                    it is AND'ed with $7f.
+; switch	(state, position, AND condition, targets)
+swbase		; Each switch is 8 bytes, 4th to 8th byte are the targets. The targets are basically a tile in a room that can be changed.
 switch_0	!byte $00, $11, $ff, swtarget0-swtargetbase, swtarget1-swtargetbase,$ff,$ff,$ff
 switch_1	!byte $00, $16, switch_2-swbase, swtarget2-swtargetbase,$ff,$ff,$ff,$ff
 switch_2	!byte $00, $23, switch_1-swbase, swtarget2-swtargetbase,$ff,$ff,$ff,$ff
@@ -245,6 +248,14 @@ loot_trig0	!byte $48,f_sword,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 ; -------------------------------------------------
 
 mobs_entries
+;          each label here is a list (until next label) with 1 header byte:
+;           - header byte:  number of groups
+;           - group 0 byte #0:  enemy type (0-255)
+;           - group 0 byte #1:  quantity in group 0
+;           - group 1 byte #0:  enemy type (0-255)
+;           - group 1 byte #1:  quantity in group 1
+;           - ... etc
+;
 ;          Enemy types:
 ;          0 - slime    (green - easy)
 ;          1 - spider   (green - easy)
@@ -548,5 +559,62 @@ collision_map	!byte $02,$00,$00,$00,$00,$00,$00,$00
 		!byte $00,$00,$00,$00,$00,$00,$00,$00
 		!byte $00,$00,$00,$00,$00,$00,$02,$02
 
-d0tables_end
+; Everything below is static data
+; ------------------------------------------------
+; Player's start location position arrays per map
+; ------------------------------------------------
+; player's starting pos in tiles
+;
+StartLocX	!byte 30,30,0,0,0,0,0,0
+StartLocY	!byte 34,34,0,0,0,0,0,0
 
+; screen starting pos (left corner) in tiles
+MapStartX	!byte 20,20,0,0,0,0,0,0
+MapStartHiX	!byte 0,0,0,0,0,0,0,0
+MapStartY	!byte 24,24,0,0,0,0,0,0
+
+
+; screen graphics colors per map
+BorderColor	!byte 0
+BGColor		!byte 0
+MultiColor1	!byte 12
+MultiColor2	!byte 9
+
+num_dirs_table	!byte $03,$03,$03,$03,$03,$03,$03,$03,$07,$07,$07,$07,$07,$07,$03,$03
+
+fadeout_colors_bg_border
+		!byte $00,$00,$00,$00,$09,$09,$09,$09
+fadeout_colors_extra_color1
+		!byte $09,$09,$0b,$0b,$0c,$0c,$0f,$0f
+fadeout_colors_extra_color2
+		!byte $09,$09,$09,$09,$0b,$0b,$0b,$0b
+gradient_fader
+		!byte $00,$07,$04,$06,$06,$06,$00,$05
+		!byte $08,$0f,$0c,$0e,$0e,$0e,$08,$0d
+damage_flash
+		!byte $07,$07,$02,$02
+
+
+; Tables indexed by this direction list: 0=south, 1=west, 2=north, 3=east
+player_x_force_by_dir
+		!byte $00,$06,$00,$fa	; push force affecting player will be opposite of his/her direction
+player_y_force_by_dir
+		!byte $fa,$00,$06,$00
+enemy_x_force_by_dir
+		!byte $00,$fa,$00,$06	; push force affecting enemy will be opposite of his/her direction
+enemy_y_force_by_dir
+		!byte $06,$00,$fa,$00
+
+
+; --------------------------------------------
+; SFX suite	
+; 		format is: BYTE<8 bits>,BYTE<high 4 bits|low 4 bits>, ...
+;		SFX format:
+;		  <attack|decay>, <systain|release>, <1 byte pulse width (reversed high/low bytes)>,
+;		  <wave form value = [$10,$11,$20,$21,$40,$41,$80,$81]> OR 
+;		  <absolute note value n = [n >$81, n < $c0] >, ...
+sword_swing
+		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
+
+
+d0tables_end

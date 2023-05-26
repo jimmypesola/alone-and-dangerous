@@ -2,6 +2,7 @@
 		!to "aad_unpacked.prg", cbm
 		!source "coretables_labels.a"
 		!source "outdoortables_labels.a"
+		!source "file_lengths.a"
 ; Memory (VIC Bank at $4000, character set at $4800, sprite blocks at $5000-$6fff)
 ;
 ;	CODE #1:
@@ -9,7 +10,7 @@
 ;	$0810-$1fff -> -- Routines and tables
 ;
 ;	MUSIC:
-; 	$2000-$2fff -> 4096 bytes --- SID player routine (during dev use it for code)
+; 	$2000-$2fff -> 4096 bytes --- SID player routine
 ;	                              (multi-sids are possible, sound effects are supported and enabled.)
 ;
 ;	CODE #2:
@@ -33,7 +34,7 @@
 ;
 ;	CODE #3:
 ;	$c000-$cfff -> 4096 bytes --- code routines
-;	$e000-$efff -> 4096 bytes --- Keep clear, Basic ROM is banked in at loading.
+;	$e000-$efff -> 4096 bytes --- Keep clear from $e600-$efff, kernal ROM is banked in at loading and messes up data here.
 ;	$f000-$f5ff -> 1536 bytes --- Core tables and game data (prel.)
 ;	$f600-$f9e7 -> -- Color buffer, 1000 bytes
 ;	$fa00-$faf0 -> -- Tile Buffer
@@ -43,11 +44,11 @@
 ; TODO: If all enemies are killed in some room, spawn item / door.
 ; TODO: Make shops
 ; TODO: Make more enemies
-; TODO: Make bosses
+; TODO: Make more bosses
 
 
 ; Features:
-; 1. Uses a loader, rle compressed map data. Also compressed (lzw?) with Exomizer.
+; 1. Uses a loader, rle compressed map data. Also compressed (lzw?) with Exomizer. Runtime dungeon loading / map swapping works now as well.
 ; 2. Configure memory, switch in RAM at BASIC ROM ($a000-$bfff).
 ; 3. Load compressed map data to $7000-$bfff, as near the end ($bfff) as possible.
 ; 4. Unpack new map specific tables to $e000-$e5ff. Not further, as loader will be bugged if more than $e5ff 
@@ -131,7 +132,7 @@ vspr_counter = $17
 PlayerBusyTimer = $18
 
 put_tile_tmp = $19
-RandomIdx = $1a
+tmpy = $1a
 
 xdif = $1b
 ydif = $1c
@@ -201,7 +202,7 @@ MapDungeon7 = 7
 MapRatDungeon = 8
 
 PlayerPowerState = $5b
-Overruns = $5c
+PrevMapID = $5c
 
 ; Animation counter
 AnimCounter = $5f	; For each sprite
@@ -314,6 +315,7 @@ PlayerStateStartLootChest = 10
 PlayerStateLootChest = 11
 PlayerStateSwitchMap = 12
 PlayerStatePullSwitch = 13
+PlayerStatePullingSwitch = 14
 
 ; ----------------------
 ; Enemy animation state values
@@ -415,7 +417,6 @@ c_right		= 3
 ;-----------------------------------------------------------
 ;tilepos_lo 	=	$f100
 ;tilepos_hi	=	$f200
-;colormem_hi	=	$f300
 
 ;-----------------------------------------------------------
 ; Sprite tables (160 bytes)
@@ -602,6 +603,8 @@ begin_code_801
 ; --------------------------------------------
 ; dungeon / overworld names + file names
 ; --------------------------------------------
+coretables		!pet "ct"
+coretables_len
 outdoorworld		!pet "od"
 outdoorworld_len
 outdoorsprites		!pet "ods"
@@ -689,11 +692,29 @@ tables_name_len_idx	!byte outdoortables_len-outdoortables, dungeon_0_tables_len-
 			!byte dungeon_5_tables_len-dungeon_5_tables, dungeon_6_tables_len-dungeon_6_tables
 			!byte dungeon_7_tables_len-dungeon_7_tables
 
+od_tables_lb_end	= <($0400 + od_tables_len - 2)
+od_tables_hb_end	= >($0400 + od_tables_len - 2)
+od_lb_end		= <($6ffa + od_len - 2)
+od_hb_end		= >($6ffa + od_len - 2)
+od_sprites_lb_end	= <($4ffe + od_sprites_len - 2)
+od_sprites_hb_end	= >($4ffe + od_sprites_len - 2)
+od_charset_lb_end	= <($47fe + od_charset_len - 2)
+od_charset_hb_end	= >($47fe + od_charset_len - 2)
+d0_tables_lb_end	= <($0400 + d0_tables_len - 2)
+d0_tables_hb_end	= >($0400 + d0_tables_len - 2)
+d0_lb_end		= <($6ffa + d0_len - 2)
+d0_hb_end		= >($6ffa + d0_len - 2)
+d0_sprites_lb_end	= <($4ffe + d0_sprites_len - 2)
+d0_sprites_hb_end	= >($4ffe + d0_sprites_len - 2)
+d0_charset_lb_end	= <($47fe + d0_charset_len - 2)
+d0_charset_hb_end	= >($47fe + d0_charset_len - 2)
+
+
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-tables_file_end_lb	!byte $2c, $e0, $e1, $e1, $e1, $e1, $e1, $e1, $e1
-tables_file_end_hb	!byte $a3, $a1, $4c, $4c, $4c, $4c, $4c, $4c, $4c
+tables_file_end_lb	!byte od_tables_lb_end, d0_tables_lb_end, $e1, $e1, $e1, $e1, $e1, $e1, $e1
+tables_file_end_hb	!byte od_tables_hb_end, d0_tables_hb_end, $4c, $4c, $4c, $4c, $4c, $4c, $4c
 
 map_name_lb_idx		!byte <outdoorworld,<dungeon_0,<dungeon_1,<dungeon_2,<dungeon_3
 			!byte <dungeon_4,<dungeon_5,<dungeon_6,<dungeon_7
@@ -710,8 +731,8 @@ map_name_len_idx	!byte outdoorworld_len-outdoorworld
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-map_file_end_lb		!byte $4f, $63, $ec, $ec, $ec, $ec, $ec, $ec, $ec
-map_file_end_hb		!byte $6d, $54, $6c, $6c, $6c, $6c, $6c, $6c, $6c
+map_file_end_lb		!byte od_lb_end, d0_lb_end, $ec, $ec, $ec, $ec, $ec, $ec, $ec
+map_file_end_hb		!byte od_hb_end, d0_hb_end, $6c, $6c, $6c, $6c, $6c, $6c, $6c
 
 sprite_name_lb_idx	!byte <outdoorsprites, <dungeon_0_sprites, <dungeon_1_sprites
 			!byte <dungeon_2_sprites, <dungeon_3_sprites, <dungeon_4_sprites
@@ -723,15 +744,15 @@ sprite_name_hb_idx	!byte >outdoorsprites, >dungeon_0_sprites, >dungeon_1_sprites
 
 sprite_name_len_idx	!byte outdoorsprites_len-outdoorsprites, dungeon_0_sprites_len-dungeon_0_sprites
 			!byte dungeon_1_sprites_len-dungeon_1_sprites, dungeon_2_sprites_len-dungeon_2_sprites
-			!byte dungeon_3_sprites_len-dungeon_1_sprites, dungeon_4_sprites_len-dungeon_2_sprites
-			!byte dungeon_5_sprites_len-dungeon_1_sprites, dungeon_6_sprites_len-dungeon_2_sprites
-			!byte dungeon_7_sprites_len-dungeon_1_sprites
+			!byte dungeon_3_sprites_len-dungeon_3_sprites, dungeon_4_sprites_len-dungeon_4_sprites
+			!byte dungeon_5_sprites_len-dungeon_5_sprites, dungeon_6_sprites_len-dungeon_6_sprites
+			!byte dungeon_7_sprites_len-dungeon_7_sprites
 
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-sprite_file_end_lb	!byte $8e, $a9, $85, $85, $85, $85, $85, $85, $85
-sprite_file_end_hb	!byte $59, $5a, $59, $59, $59, $59, $59, $59, $59
+sprite_file_end_lb	!byte od_sprites_lb_end, d0_sprites_lb_end, $85, $85, $85, $85, $85, $85, $85
+sprite_file_end_hb	!byte od_sprites_hb_end, d0_sprites_hb_end, $59, $59, $59, $59, $59, $59, $59
 
 
 charset_name_lb_idx	!byte <outdoorcharset, <dungeon_0_charset, <dungeon_1_charset
@@ -744,23 +765,23 @@ charset_name_hb_idx	!byte >outdoorcharset, >dungeon_0_charset, >dungeon_1_charse
 
 charset_name_len_idx	!byte outdoorcharset_len-outdoorcharset, dungeon_0_charset_len-dungeon_0_charset
 			!byte dungeon_1_charset_len-dungeon_1_charset, dungeon_2_charset_len-dungeon_2_charset
-			!byte dungeon_3_charset_len-dungeon_1_charset, dungeon_4_charset_len-dungeon_2_charset
-			!byte dungeon_5_charset_len-dungeon_1_charset, dungeon_6_charset_len-dungeon_2_charset
-			!byte dungeon_7_charset_len-dungeon_1_charset
+			!byte dungeon_3_charset_len-dungeon_3_charset, dungeon_4_charset_len-dungeon_4_charset
+			!byte dungeon_5_charset_len-dungeon_5_charset, dungeon_6_charset_len-dungeon_6_charset
+			!byte dungeon_7_charset_len-dungeon_7_charset
 
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-charset_file_end_lb	!byte $e3, $56, $e1, $e1, $e1, $e1, $e1, $e1, $e1
-charset_file_end_hb	!byte $4c, $4c, $4c, $4c, $4c, $4c, $4c, $4c, $4c
+charset_file_end_lb	!byte od_charset_lb_end, d0_charset_lb_end, $e1, $e1, $e1, $e1, $e1, $e1, $e1
+charset_file_end_hb	!byte od_charset_hb_end, d0_charset_hb_end, $4c, $4c, $4c, $4c, $4c, $4c, $4c
 
 dungeon_name		!scr "  dungeon @  "
 rat_dungeon_name	!scr "   sewers    "
 overworld_name		!scr "  overworld  "
 
-dungeon_names_lo	!byte <overworld_name, <dungeon_name, <dungeon_name, <dungeon_name, <dungeon_name, <dungeon_name
+dungeon_names_lo	!byte <overworld_name, <rat_dungeon_name, <dungeon_name, <dungeon_name, <dungeon_name, <dungeon_name
 			!byte <dungeon_name, <dungeon_name, <dungeon_name
-dungeon_names_hi	!byte >overworld_name, >dungeon_name, >dungeon_name, >dungeon_name, >dungeon_name, >dungeon_name
+dungeon_names_hi	!byte >overworld_name, >rat_dungeon_name, >dungeon_name, >dungeon_name, >dungeon_name, >dungeon_name
 			!byte >dungeon_name, >dungeon_name, >dungeon_name
 
 ;-----------------------------------------------------------
@@ -796,7 +817,11 @@ scrollirq
 		; Scroll state idle, don't enter here unless "idle"
 		;-----------------------------------------------------
 
-+		jsr set_music_sprites_irq
++		sei
+		jsr set_music_sprites_irq
+		jsr initsort
+		cli
+
 		jsr draw_stats
 		jmp scrollAndTransferCommonReturn
 
@@ -835,10 +860,40 @@ transfer_irq
 		; Transfer state exit, don't enter here unless transfer is done
 		;----------------------------------------------------------------
 
-+		jsr set_music_sprites_irq
++		sei
+		jsr set_music_sprites_irq
+		jsr initsort
+		cli
+
 		jsr draw_stats
 		jmp scrollAndTransferCommonReturn
 
+
+;-----------------------------------------------------------
+; raster routine - Switch processing
+; - Needed for the heavy processing it implies
+; parameters:
+;-----------------------------------------------------------
+;switch_irq
+;		sei
+;		sta areg
+;		stx xreg
+;		sty yreg
+
+;		jsr $2003
+
+;		jsr change_switch_state
+
+;		lda #PlayerStateInControl
+;		sta PlayerState
+
+;		jsr set_music_sprites_irq
+
+;		ldy yreg
+;		ldx xreg
+;		lda areg
+;		cli
+;		rti
 
 ;---------------------------------------
 ; Scroll left
@@ -892,7 +947,6 @@ scrollStateRight
 			jsr setup_enemies
 			jsr draw_stats
 			cli
-			jmp scrollAndTransferCommonReturn
 +
 		jmp scrollAndTransferCommonReturn
 
@@ -937,7 +991,6 @@ scrollStateDown
 			jsr setup_enemies
 			jsr draw_stats
 			cli
-			jmp scrollAndTransferCommonReturn
 +
 		jmp scrollAndTransferCommonReturn
 
@@ -1242,11 +1295,13 @@ allow_use_weapon_only
 				bne +
 					; save switch tile idx and location
 					sta tmp_switch_idx
+					sta sw_src_tile
 					lda plr_r_last_tilepos
 					sta tmp_switch_loc
+					sta sw_src_pos
 
 					; set switch timer
-					lda #100
+					lda #16
 					sta PlayerBusyTimer
 					lda #PlayerStatePullSwitch
 					sta PlayerState
@@ -1256,11 +1311,13 @@ allow_use_weapon_only
 				bne +
 					; save switch tile idx and location
 					sta tmp_switch_idx
+					sta sw_src_tile
 					lda plr_r_last_tilepos
 					sta tmp_switch_loc
+					sta sw_src_pos
 
 					; set switch timer
-					lda #100
+					lda #16
 					sta PlayerBusyTimer
 					lda #PlayerStatePullSwitch
 					sta PlayerState
@@ -2119,12 +2176,14 @@ increase_gold
 		sta player_gold
 		cmp #10
 		bcc +
-			lda #9
+			lda #9		; maxed out gold? :-)
 			sta player_gold
 			sta player_gold+1
 			sta player_gold+2
 			sta player_gold+3
 			sta player_gold+4
+			cld
+			rts
 +
 		; Adding complete, now convert back to displayable digits
 		clc
@@ -2172,14 +2231,27 @@ get_index_from_map_coords
 ; --------------------------------------------
 ; get_random
 ; gets a random byte value in register a.
-; destroys registers: none
-; parameters: RandomIdx - seed (optional)
+; destroys registers: a
+; parameters: x1 - seed (optional)
 ; returns: a - random number
 ; --------------------------------------------
 get_random
-		ldy RandomIdx
-		lda random_table,y
-		inc RandomIdx
+		inc x1
+		clc
+x1=*+1
+		lda #$00	;x1
+c1=*+1
+		eor #$c2	;c1
+a1=*+1
+		eor #$11	;a1
+		sta a1
+b1=*+1
+		adc #$37	;b1
+		sta b1
+		lsr
+		eor a1
+		adc c1
+		sta c1
 		rts
 
 ; --------------------------------------------
@@ -2614,11 +2686,8 @@ clear_status_bar
 ;-------------------------------
 fname		= tmp_addr
 fname_len	!byte $00
-file_end	!word $0000
 ;-------------------------------
 
-loader
-		jmp load_and_decrunch
 ;-------------------------------
 ; just return from interrupt asap
 loadirq
@@ -2635,7 +2704,7 @@ flashload
 		jmp $f6ed
 ;-------------------------------
 
-load
+load_file
 		lda #<flashload
 		sta $0328
 		lda #>flashload
@@ -2655,7 +2724,7 @@ load
 
 		lda #$00
 		jsr $ffd5     ; call LOAD
-		bcs load_error    ; if carry set, the file could not be opened
+check_error	bcs load_error    ; if carry set, the file could not be opened
 
 		; check drive error channel here to test for
 		; file not found error etc.
@@ -2708,7 +2777,7 @@ destination_hi  = * + 1
 
 ; -------------------------------------------------------------------
 ; disable interrupts, disable decimal mode, init disk loader
-load_and_decrunch
+loader
 		sei
 		lda #$7f
 		sta $dc0d
@@ -2727,16 +2796,14 @@ load_and_decrunch
 		lda #0
 		sta $d021
 
-		ldx #<loading_text
-		ldy #>loading_text
-		jsr caption_text
-
-		jsr swap_screen
-
-		lda #$36      ; enable kernal
+		lda #$36	; enable kernal
 		sta $01
 
-		jsr load
+		lda $dd0d
+		inc $d019
+		cli
+
+		jsr load_file
 
 		sei		; stop all interrupts now
 		lda #$35	; disable kernal again
@@ -2746,18 +2813,8 @@ load_and_decrunch
 		sta $dc0d
 		sta $dd0d
 
-		; set start address for crunched data
-		lda file_end
-		sta _byte_lo
-		lda file_end+1
-		sta _byte_hi
-
-		ldx #<decr_text
-		ldy #>decr_text
-		jsr caption_text
-
-		jsr decrunch
 		rts
+
 ; --------------------------------------
 ; caption_text - prints loading status
 ; a - text len
@@ -3121,6 +3178,8 @@ setup
 		lda #1
 		sta PlayerWeaponPower
 softsetup
+		jsr gen_tilepos_tables
+		jsr clear_coretable_vars
 
 		; set charset at $4800, screen at $4000
 		lda #$02
@@ -3142,7 +3201,13 @@ softsetup
 			bpl -
 
 		; set screen offset on map [ x = map ID]
-		ldx MapID
+		; Check from which map we came. PrevMapID multiplied by 8 and added to MapID
+		; as index to MapStartX, MapStartHiX, MapStartY, StartPosX, StartPosY, etc as they are fetched.
+		clc
+		ldx PrevMapID
+		
+		lda MapID
+		sta PrevMapID	; Now that we've used PrevMapID, we can store the new MapID there.
 
 		lda MapStartX,x
 		sta offx
@@ -3152,13 +3217,13 @@ softsetup
 		sta offy
 
 		; set background colors
-		lda BorderColor,x
+		lda BorderColor
 		sta $d020
-		lda BGColor,x
+		lda BGColor
 		sta $d021
-		lda MultiColor1,x
+		lda MultiColor1
 		sta $d022
-		lda MultiColor2,x
+		lda MultiColor2
 		sta $d023
 
 		; set mob source to world
@@ -3204,8 +3269,6 @@ softsetup
 		; Set Player state to stopped facing south
 		lda #PlayerStopFacingSouth
 		sta PlayerAnimState
-
-
 
 		; enable multicolor for sprites 4, 5, 6, and 7
 		lda #$f0
@@ -3271,7 +3334,6 @@ softsetup
 ;
 ;-----------------------------------------------------------
 set_music_sprites_irq
-		sei
 
 		lda #<maininter
 		sta $fffe
@@ -3286,9 +3348,6 @@ set_music_sprites_irq
 		inc $d019	; acknowledge raster irq.
 		lda $dc0d	; acknowledge pending irqs.
 		;lda $dd0d	; acknowledge pending irqs.
-
-		jsr initsort
-		cli
 
 		rts
 
@@ -3319,6 +3378,33 @@ set_transfer_irq
 		cli
 
 		rts
+
+;-----------------------------------------------------------
+
+;-----------------------------------------------------------
+; set_switch_irq - set switch processing raster interrupt
+;
+;-----------------------------------------------------------
+;set_switch_irq
+;		sei
+
+;		lda #<switch_irq
+;		sta $fffe
+;		lda #>switch_irq
+;		sta $ffff
+
+;		lda #$1b	; Default settings, normal text mode, set raster high bit to 0
+;		sta $d011
+;		lda #$00	; Set main interrupt to happen at line 32
+;		sta $d012
+
+;		inc $d019	; acknowledge raster irq.
+;		lda $dc0d	; acknowledge pending irqs.
+		;lda $dd0d	; acknowledge pending irqs.
+
+;		cli
+
+;		rts
 
 ;-----------------------------------------------------------
 
@@ -3471,7 +3557,7 @@ spawn_loot
 		asl
 		bcc +
 			inc xtablehi+enemy,x
-+		adc #xoffset+8
++		adc #xoffset
 		sta xtablelo+enemy,x
 		sta xtablelo+enemy+16,x
 		bcc +
@@ -3910,6 +3996,136 @@ inv_sprites1	!byte f_bow+4,f_necklace+4,f_shield+4,f_masterkey+4,f_torch+4,f_gau
 		!byte $00
 		!byte $00
 
+scroll_tile
+		lda $49ef
+		sta scroll_tile_tmp
+		lda $49ee
+		sta $49ef
+		lda $49ed
+		sta $49ee
+		lda $49ec
+		sta $49ed
+		lda $49eb
+		sta $49ec
+		lda $49ea
+		sta $49eb
+		lda $49e9
+		sta $49ea
+		lda $49e8
+		sta $49e9
+		lda $49df
+		sta $49e8
+		lda $49de
+		sta $49df
+		lda $49dd
+		sta $49de
+		lda $49dc
+		sta $49dd
+		lda $49db
+		sta $49dc
+		lda $49da
+		sta $49db
+		lda $49d9
+		sta $49da
+		lda $49d8
+		sta $49d9
+		lda scroll_tile_tmp
+		sta $49d8
+		lda $49f7
+		sta scroll_tile_tmp
+		lda $49f6
+		sta $49f7
+		lda $49f5
+		sta $49f6
+		lda $49f4
+		sta $49f5
+		lda $49f3
+		sta $49f4
+		lda $49f2
+		sta $49f3
+		lda $49f1
+		sta $49f2
+		lda $49f0
+		sta $49f1
+		lda $49e7
+		sta $49f0
+		lda $49e6
+		sta $49e7
+		lda $49e5
+		sta $49e6
+		lda $49e4
+		sta $49e5
+		lda $49e3
+		sta $49e4
+		lda $49e2
+		sta $49e3
+		lda $49e1
+		sta $49e2
+		lda $49e0
+		sta $49e1
+		lda scroll_tile_tmp
+		sta $49e0
+		rts
+scroll_tile_tmp
+		!byte $00
+
+
+; -------------------------------------------------
+;  Generates the tilepos_lo and tilepos_hi tables
+; -------------------------------------------------
+gen_tilepos_tables
+		; initialize vars
+		ldx #0
+		ldy #0
+		lda #$40
+		sty gen_tilepos_lo
+		sta gen_tilepos_hi
+
+		; loop through all columns in a row
+-		lda gen_tilepos_lo
+		sta $f000,x
+		clc
+		adc #2
+		sta gen_tilepos_lo
+		lda gen_tilepos_hi
+		sta $f0f0,x
+		adc #0
+		sta gen_tilepos_hi
+		inx
+		cpx #240
+		bne +
+		rts
+
++		iny
+		cpy #20
+		bne -
+
+		; jump to next row
+		lda gen_tilepos_lo
+		clc
+		adc #$28
+		sta gen_tilepos_lo
+		lda gen_tilepos_hi
+		adc #0
+		sta gen_tilepos_hi
+		ldy #0
+		jmp -
+
+gen_tilepos_lo	!byte $00
+gen_tilepos_hi	!byte $00
+
+; -------------------------------------------------
+;  Clear the coretable variables
+; -------------------------------------------------
+clear_coretable_vars
+		ldx #0
+		lda #0
+-		sta ytable,x
+		sta ytable+256,x
+		inx
+		bne -
+		rts
+
 ;-----------------------------------------------------------
 end_code_800
 ;-----------------------------------------------------------
@@ -3987,7 +4203,7 @@ begin_code_3k
 		; set initial map #
 		lda #0
 		sta MapID
-		sta Overruns
+		sta PrevMapID
 
 		; init multiplexing jump table (didn't find a way to do this in compile time with ACME.)
 		lda #<exitinter
@@ -4017,20 +4233,20 @@ begin_code_3k
 		;jsr calc_stats
 
 		; init random number table
-		ldy #0
+;		ldy #0
 
---		lda #80
-		ldx #8
+;--		lda #80
+;		ldx #8
 
--		adc random_table,x
-		dex
-		adc $dc08
-		sta random_table,x
-		cpx #0
-		bne -
+;-		adc random_table,x
+;		dex
+;		adc $dc08
+;		sta random_table,x
+;		cpx #0
+;		bne -
 
-		iny
-		bne --
+;		iny
+;		bne --
 
 main_routine
 		; set main interrupt (sprite multiplexer)
@@ -4104,10 +4320,10 @@ player_takes_damage
 		rts
 
 ;-----------------------------------------------------------
-; player_attacks
+; player_busy
 ;
 ;-----------------------------------------------------------
-player_attacks
+player_busy
 		ldx PlayerBusyTimer
 		beq +
 			dex			; Player is busy and cannot move, either swinging sword or
@@ -4263,7 +4479,8 @@ player_fades_counter
 		!byte $00
 
 
-
+; TODO: Change this shit so we load all files first, 
+;       THEN decompress!
 ;-----------------------------------------------------------
 ; prepare_new_map - loads the new map into place
 ; parameters: MapID (which map to load)
@@ -4272,7 +4489,19 @@ player_fades_counter
 prepare_new_map
 		; Load the correct map and set things up
 
-		; Load map specific data arrays
+		; Set up map name, display loading text
+		ldy MapID
+		lda dungeon_names_lo,y
+		sta destination_lo
+		lda dungeon_names_hi,y
+		sta destination_hi
+		jsr swap_screen
+		ldx #<loading_text
+		ldy #>loading_text
+		jsr caption_text
+		jsr swap_screen
+
+		; Set tables file load data
 		ldy MapID
 		lda tables_name_lb_idx,y
 		sta fname
@@ -4280,18 +4509,10 @@ prepare_new_map
 		sta fname+1
 		lda tables_name_len_idx,y
 		sta fname_len
-		lda tables_file_end_lb,y
-		sta file_end
-		lda tables_file_end_hb,y
-		sta file_end+1
-		lda dungeon_names_lo,y
-		sta destination_lo
-		lda dungeon_names_hi,y
-		sta destination_hi
-		jsr swap_screen
 		jsr loader
 
 		; load RLE compressed map content data
+		; Set tables file load data
 		ldy MapID
 		lda map_name_lb_idx,y
 		sta fname
@@ -4299,10 +4520,6 @@ prepare_new_map
 		sta fname+1
 		lda map_name_len_idx,y
 		sta fname_len
-		lda map_file_end_lb,y
-		sta file_end
-		lda map_file_end_hb,y
-		sta file_end+1
 		jsr loader
 
 		; load sprites
@@ -4313,18 +4530,15 @@ prepare_new_map
 		sta fname+1
 		lda sprite_name_len_idx,y
 		sta fname_len
-		lda sprite_file_end_lb,y
-		sta file_end
-		lda sprite_file_end_hb,y
-		sta file_end+1
 		jsr loader
 
-		; load character set (blank out screen here, chars look ugly
-		;                     when new charset loads)
-		lda $d011
-		and #$ef
-		sta $d011
+		; (blank out screen here, chars look ugly
+		;  when new charset is loaded and unpacked)
+		;lda $d011
+		;and #$ef
+		;sta $d011
 
+		; load character set
 		ldy MapID
 		lda charset_name_lb_idx,y
 		sta fname
@@ -4332,15 +4546,44 @@ prepare_new_map
 		sta fname+1
 		lda charset_name_len_idx,y
 		sta fname_len
-		lda charset_file_end_lb,y
-		sta file_end
-		lda charset_file_end_hb,y
-		sta file_end+1
 		jsr loader
 
-		lda $d011
-		ora #$10
-		sta $d011
+;---------------------------------------------------------------------
+		; decrunch tables
+		ldy MapID
+		lda tables_file_end_lb,y
+		sta _byte_lo
+		lda tables_file_end_hb,y
+		sta _byte_hi
+		jsr decrunch
+check_tables
+		; decrunch map
+		ldy MapID
+		lda map_file_end_lb,y
+		sta _byte_lo
+		lda map_file_end_hb,y
+		sta _byte_hi
+		jsr decrunch
+check_map
+		; decrunch sprites
+		ldy MapID
+		lda sprite_file_end_lb,y
+		sta _byte_lo
+		lda sprite_file_end_hb,y
+		sta _byte_hi
+		jsr decrunch
+check_sprites
+		; decrunch charset
+		ldy MapID
+		lda charset_file_end_lb,y
+		sta _byte_lo
+		lda charset_file_end_hb,y
+		sta _byte_hi
+		jsr decrunch
+check_charset
+		;lda $d011
+		;ora #$10
+		;sta $d011
 
 		rts
 ;-----------------------------------------------------------
@@ -4375,7 +4618,7 @@ ctrl_player
 
 +		cmp #PlayerStateAttack
 		bne +
-			jsr player_attacks
+			jsr player_busy
 			jmp ctrl_player_check_edges
 
 +		cmp #PlayerStateTransitInit
@@ -4415,14 +4658,14 @@ ctrl_player
 
 +		cmp #PlayerStatePullSwitch
 		bne +
-			; should be switch!
-			ldx tmp_switch_loc
-			ldy tmp_switch_idx
+			; Do nothing here, everything will be done on next interrupt
+			lda #1
+			jmp ctrl_player_end	; don't check edges!
 
-			; set parameters to change_switch_state routine
-			stx sw_src_pos
-			sty sw_src_tile
-
++		cmp #PlayerStatePullingSwitch
+		bne +
+			; Pulling switches is heavy work!
+			jsr player_busy
 			lda #1
 			jmp ctrl_player_end	; don't check edges!
 
@@ -4461,7 +4704,7 @@ ctrl_player
 			lda ScanResult
 			and #64
 			beq *+5
-				jsr setup
+				jsr softsetup
 				lda player_max_hp+1
 				sta player_hp+1
 				lda player_max_hp
@@ -4588,7 +4831,7 @@ ctrl_player_check_collisions
 			tax
 			lda doorexits,x ; fetch doorexit for target screen at source screen.
 
-+			cmp #$f0
++			cmp #$e0
 			bcc +
 				sec
 				sbc #$e0 ; subtract 224 to get multi door offset
@@ -4715,8 +4958,7 @@ open_chest
 ; tile index.
 ;
 ; parameters:
-; (in) x register : screen position (0-239)
-; (in) y register : tile index
+; (in) CurrentRoomIdx : screen position (0-239)
 ;
 ; returns:
 ; a : result:
@@ -4724,6 +4966,9 @@ open_chest
 ;               2 = No switch found at specified position!
 ;-----------------------------------------------------------
 change_switch_state
+
+		sei
+		inc $d021
 
 		; First the intelligence...
 		ldx CurrentRoomIdx
@@ -4744,10 +4989,10 @@ next_switch		lda switch_lists,x	; get switch list x
 			bne +
 				jmp exit_switch_loop	; exit loop, no more switches
 
-+			stx sw_tmp_x		; save switch index
++			stx sw_tmp_x		; save switch index (x=$05)
 
 			tay
-			sty sw_tmp_y		; save switch y
+			sty sw_tmp_y		; save switch y (y=$18)
 
 			lda swbase+1,y		; get position
 			cmp plr_r_last_tilepos	; check with last collided tile (should be a switch)
@@ -4755,7 +5000,7 @@ next_switch		lda switch_lists,x	; get switch list x
 				inx		; if this position was not correct, check next switch
 				jmp next_switch
 
-+			lda swbase,y
++			lda swbase,y		; get state of switch (0 or 1)
 			eor #1			; toggle state of switch y
 			sta swbase,y
 			sta sw_state_swa	; save the state
@@ -4803,17 +5048,16 @@ exit_switch_condition
 				lda sw_state_swa
 				sta sw_state
 check_if_local_update
-				; Chech in which room the switch target is located
+				; Check in which room the switch target is located
 				ldx sw_target_pos
 				lda swtargetbase,x	; Get room idx for target x
 				sta sw_target_room	; save the target room
 
-				inx
 				txa
 				clc
 				adc sw_state		; add state
 				tax
-				ldy swtargetbase+1,x	; first get the tile based on state
+				ldy swtargetbase+2,x	; first get the tile based on state (pos 2 or 3 in swtargetX)
 				sty sw_target_tile	; save target tile
 
 				lda sw_target_room
@@ -4826,7 +5070,6 @@ check_if_local_update
 				tax
 				tya
 				sta tilebuffer,x	; update tile buffer
-				sei
 				lda screen_id
 				eor #1
 				sta screen_id
@@ -4834,28 +5077,33 @@ check_if_local_update
 				lda screen_id
 				eor #1
 				sta screen_id
-				cli
 
 skip_local_target_update
 				; Do a remote tile update
 				ldy MapID
-				lda pc_map_idx,y	; Find which pc_target_list it is
+				lda pc_map_idx,y	; Find which pc_target_list it is (pc_map_idx entries refer to 
+							; one of pc_target_list_* address offsets.)
 				tay
--				lda pc_target_list_base,y	; get first empty target in list
-				cmp #$ff
-				beq +
-				cmp sw_target_room	; is the target room the same as this position?
-				beq ++
---					iny	; skip to next "persistent change" target
-					iny
-					iny
-					jmp -
+check_next_pc_target			lda pc_target_list_base,y	; get first empty target in list [0]
+				cmp #$ff			; is it empty?
+				beq +				; if yes, jump ahead and then store it at the corresponding target list position.
+				cmp sw_target_room	; otherwise it is the target room the same as this position, we need to check if next
+							; position is free:
+				beq check_target_pc_pos
 
-++					ldx sw_target_pos
-					lda swtargetbase+1,x
-					cmp pc_target_list_base+1,y	; Is the tile position also the same?
-					bne --				; If not, check next persistent change
-									; index.
+step_ahead_pc			iny
+				iny
+				iny
+				jmp check_next_pc_target	; loop back and skip to next "persistent change" target
+
+check_target_pc_pos			ldx sw_target_pos		; Get switch target pos index
+					lda swtargetbase+1,x		; Get switch target position (second index in entry)
+					cmp pc_target_list_base+1,y	; Is the tile position also the same? (Only a single
+									;   switch set can be connected to a tile position.)
+					bne step_ahead_pc		; If not, check next persistent change index.
+
+				; Otherwise we have found the correct index,
+				; or it is unused since earlier.
 
 				; Save the remote tile update
 +				lda sw_target_room
@@ -4891,18 +5139,25 @@ exit_switch_loop
 
 ++		tya
 		sta tilebuffer,x	; update tile buffer
-		sei
+
 		lda screen_id
 		eor #1
 		sta screen_id
+
 		jsr put_tile
 
 		lda screen_id
 		eor #1
 		sta screen_id
-+		cli
 
-		rts
+		; Clear pending interrupts just in case (causes frame skips)
+		asl $d019
+		lda $dc0d
+		lda $dd0d
+		dec $d021
+		cli
+
++		rts
 
 sw_src_pos	!byte $00
 sw_src_tile	!byte $00
@@ -5175,12 +5430,14 @@ end_tile
 		; Get high byte for tile color data and store in tmp_addr
 		lda put_tile_attr
 		bne +
-			lda colormem_hi,x
+			lda tilepos_hi,x
+			clc
+			adc #$98
 			jmp ++
 +
-			lda colormem_hi,x	; => $d8 + $2c = $04 ($0400) color buffer
+			lda tilepos_hi,x	; => $40 + $98 + $2c = $d8 + $2c = $04 ($0400) color buffer
 			clc
-			adc #$2c
+			adc #$c4
 ++
 		sta tmp_addr+1
 
@@ -5340,7 +5597,9 @@ color_left
 			pha ; <<< TILE IDX
 
 			; Get high byte for tile color data and store in tmp_addr
-			lda colormem_hi,x
+			lda tilepos_hi,x
+			clc
+			adc #$98
 			sta tmp_addr2+1
 
 			; get low byte for first row of color data and store in tmp_addr
@@ -5524,7 +5783,9 @@ color_right
 			pha ; <<< TILE IDX
 
 			; Get high byte for tile color data and store in tmp_addr
-			lda colormem_hi,x
+			lda tilepos_hi,x
+			clc
+			adc #$98
 			sta tmp_addr2+1
 
 			; get low byte for first row of color data and store in tmp_addr
@@ -5705,7 +5966,9 @@ color_top
 			pha ; <<< TILE IDX
 
 			; Get high byte for tile color data and store in tmp_addr
-			lda colormem_hi,x
+			lda tilepos_hi,x
+			clc
+			adc #$98
 			sta tmp_addr2+1
 
 			; get low byte for first row of color data and store in tmp_addr
@@ -5886,7 +6149,9 @@ color_bottom
 			pha ; <<< TILE IDX
 
 			; Get high byte for tile color data and store in tmp_addr
-			lda colormem_hi+220,x
+			lda tilepos_hi+220,x
+			clc
+			adc #$98
 			sta tmp_addr2+1
 
 			; get low byte for first row of color data and store in tmp_addr
@@ -6727,11 +6992,9 @@ maininter
 		sta areg	; save registers to zero page
 		stx xreg
 		sty yreg
-		inc Overruns
 		inc $d020
 		jsr $2003
 		dec $d020	; set cycle measuring indicator color in the border
-		lda Overruns
 
 		lda #$00	; initialize no double height, sprite over chars priority,
 		sta $d017	; no double width (make table for this and double height?)
@@ -7173,8 +7436,7 @@ statusline
 -		dex
 		bne -
 
-		ldx MapID
-		lda BGColor,x
+		lda BGColor
 		sta $d021
 
 
@@ -7201,7 +7463,6 @@ exitinter
 		;; There is plenty of raster time to trigger another interrupt just before the last bad line
 		;; and use black background.
 		sei
-		inc $d020
 
 		lda #$80
 		bit $d011
@@ -7213,10 +7474,9 @@ exitinter
 		;     PlayerState != PlayerStateTransitInit and
 		;     PlayerState != ) ...
 		cmp #$f2
-		bcs +
-		inc $d020
+		bcs skip_status
+
 		jsr calc_individual_forces
-		dec $d020
 		lda PlayerState
 		cmp #PlayerStateFades
 		beq +
@@ -7224,14 +7484,19 @@ exitinter
 		beq +
 		cmp #PlayerStatePullSwitch
 		bne +
-			; Process switches separately since logic is heavy on CPU,
-			; so set the switch after drawing sprites, then wait another frame
+			; Process switches separately, since logic is heavy on CPU,
+			; make it run in its own IRQ
+			;jsr set_switch_irq
+			lda #0
+			sta $d015
 			jsr change_switch_state
-			lda #PlayerStateInControl
+
+			lda #PlayerStatePullingSwitch
 			sta PlayerState
+
 			jmp +++++
-+
-		; then {
+
++		; then {
 			lda #$1b
 			sta $d011
 			lda #$f2
@@ -7242,11 +7507,11 @@ exitinter
 			lda #>statusline
 			sta $ffff
 
-			inc $d019	; acknowledge raster irq.
-			lda $dc0d	; acknowledge pending irqs.
+			;inc $d019	; acknowledge raster irq.
+			;lda $dc0d	; acknowledge pending irqs.
 			;lda $dd0d
 			jmp ++
-+		; else
+skip_status	; else
 
 			lda #<maininter
 			sta $fffe
@@ -7385,8 +7650,15 @@ exitinter
 +++++
 		; From now on allow trigger on irq again (sacrifice in sprite accuracy)
 		jsr sort	; sort sprites
+
+		; Check if it's not too late to scroll some tiles :)
+		lda $d011
+		cmp #$80
+		bcs ++
+		lda MapID	; Scroll only if not main map, no scrollable tiles there.
+		beq ++
+			jsr scroll_tile
 ++
-		dec $d020
 		inc $d019
 		lda $dc0d
 		lda $dd0d
@@ -7394,81 +7666,10 @@ exitinter
 		ldx xreg
 		ldy yreg
 		cli
-		dec Overruns
 		rti		; ...aaand return from the multiplexing interrupt chain.
 
-;scroll_tile
-;		lda $49ef
-;		sta scroll_tile_tmp
-;		lda $49ee
-;		sta $49ef
-;		lda $49ed
-;		sta $49ee
-;		lda $49ec
-;		sta $49ed
-;		lda $49eb
-;		sta $49ec
-;		lda $49ea
-;		sta $49eb
-;		lda $49e9
-;		sta $49ea
-;		lda $49e8
-;		sta $49e9
-;		lda $49df
-;		sta $49e8
-;		lda $49de
-;		sta $49df
-;		lda $49dd
-;		sta $49de
-;		lda $49dc
-;		sta $49dd
-;		lda $49db
-;		sta $49dc
-;		lda $49da
-;		sta $49db
-;		lda $49d9
-;		sta $49da
-;		lda $49d8
-;		sta $49d9
-;		lda scroll_tile_tmp
-;		sta $49d8
-;		lda $49f7
-;		sta scroll_tile_tmp
-;		lda $49f6
-;		sta $49f7
-;		lda $49f5
-;		sta $49f6
-;		lda $49f4
-;		sta $49f5
-;		lda $49f3
-;		sta $49f4
-;		lda $49f2
-;		sta $49f3
-;		lda $49f1
-;		sta $49f2
-;		lda $49f0
-;		sta $49f1
-;		lda $49e7
-;		sta $49f0
-;		lda $49e6
-;		sta $49e7
-;		lda $49e5
-;		sta $49e6
-;		lda $49e4
-;		sta $49e5
-;		lda $49e3
-;		sta $49e4
-;		lda $49e2
-;		sta $49e3
-;		lda $49e1
-;		sta $49e2
-;		lda $49e0
-;		sta $49e1
-;		lda scroll_tile_tmp
-;		sta $49e0
-;		rts
-;scroll_tile_tmp
-;		!byte $00
+
+
 
 ; Set up boss frames
 ;--------------------------------------
@@ -7694,16 +7895,6 @@ sorthi	!fill items-1
 ; Sets up the enemies in the current "room" and which loot they have.
 ; ------------------------------------------------------------------------------------
 setup_enemies
-		; Create new random seed
-		lda $dc09
-		lsr
-		lsr
-		lsr
-		lsr
-		ora $dc08
-		adc $d012
-		sta RandomIdx
-
 		; clear old data
 		ldx #0
 		lda #0
@@ -7719,7 +7910,7 @@ setup_enemies
 		bne -
 
 
-		; LOAD MOBS
+		; LOAD MOBS ; TODO: Can be simplified. Get rid of MobSrc, replace with world. Get rid of mobs_entries_list
 		; prepare source address
 		lda MobSrc
 		sta tmp_addr
@@ -7934,6 +8125,10 @@ _skip_boss_fill			lda mob_contour_table,y
 					sta color+enemy+10,x
 _skip_boss_contours		jmp ++
 +
+			tya
+			and #$0f	; Slice off MSB
+			tay
+
 			lda npc_fill_table,y
 			sta color+enemy+16,x		; set NPC fill color
 			lda npc_contour_table,y
@@ -7947,7 +8142,7 @@ _skip_boss_contours		jmp ++
 			sta enemy_anim_state,x
 			lda #EnemyIdle			; set AI state
 			sta enemy_state,x
-			tya
+			lda CurrentMobType
 			cmp #$80				; if (CurrentMobTypes == NPC(0))
 			bne +	; 80 = NPC 1
 				lda #EnemyIsNpc
@@ -8756,34 +8951,34 @@ clone_coordinates_for_boss
 
 ; ------------------------------------------------------------------------------------
 move_enemy_left
-		lda xtablelo+enemy,x		; Subtract from sprite X coordinate
+		lda xtablelo+enemy,x		; Subtract move speed from enemy sprite X coordinate {
 		sec
 		sbc CurrentMobSpeed
 		sta xtablelo+enemy,x
 		lda xtablehi+enemy,x
 		sbc #0
-		sta xtablehi+enemy,x
+		sta xtablehi+enemy,x		; }
 		rts
 move_enemy_right
 		lda xtablelo+enemy,x
 		clc
-		adc CurrentMobSpeed		; Add to sprite X coordinate
+		adc CurrentMobSpeed		; Add move speed to enemy sprite X coordinate {
 		sta xtablelo+enemy,x
 		lda xtablehi+enemy,x
 		adc #0
-		sta xtablehi+enemy,x
+		sta xtablehi+enemy,x		; }
 		rts
 move_enemy_up
-		lda ytable+enemy,x		; Subtract from sprite Y coordinate
+		lda ytable+enemy,x		; Subtract move speed from enemy sprite Y coordinate {
 		sec
 		sbc CurrentMobSpeed
-		sta ytable+enemy,x
+		sta ytable+enemy,x		; }
 		rts
 move_enemy_down
-		lda ytable+enemy,x
+		lda ytable+enemy,x		; Add move speed to enemy sprite Y coordinate {
 		clc
-		adc CurrentMobSpeed		; Add to sprite Y coordinate
-		sta ytable+enemy,x
+		adc CurrentMobSpeed
+		sta ytable+enemy,x		; }
 		rts
 
 ; ------------------------------------------------------------------------------------
@@ -8883,6 +9078,128 @@ safekeeping
 last_device	!byte $00	;	$ba
 ; ----------------------------------------------------------
 
+; LONG TERM VARIABLE DATA (must be kept uncorrupted!)
+persistent_vars_begin
+
+; PLAYER/ENEMY DATA TABLES
+player_max_hp
+		!byte $00,$06	; store as strings, for efficiency 
+player_hp
+		!byte $00,$06			; bcd string
+player_level
+		!byte $00,$01			; bcd string
+player_gold
+		!byte $00,$00,$00,$00,$00	; bcd string
+enemy_hp
+		!byte $00,$00,$00,$00,$00,$00,$00,$00 
+enemy_ap
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_gold
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_state
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_anim_state
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_lootidx
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_nextpos_x
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_nextpos_y
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_timer
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_pull_force_x
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_pull_force_y
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+enemy_dir
+		!byte $00,$00,$00,$00,$00,$00,$00,$00
+
+CurrentRoomIdx	!byte $00	; 1-byte room index on map
+
+; 16-bit mob data currently on screen
+CurrentMobTypes	!byte $00,$00,$00,$00,$00,$00,$00,$00,$00	; list of up to 9 bytes
+MobSrc		!word $0000	; 2-byte address where mob data is fetched
+
+; Each world/dungeon has up to two bosses. This array defines room and tile position of each boss.
+; It is checked each time a room is entered, and the location matches the room position and position within the room (2nd byte).
+; When a boss is defeated, its position shall be set to $ff permanently so it won't appear again.
+boss_loc_array	;    Room,Tile		  Map
+		!byte $ff,$ff,$ff,$ff	; outdoor world
+		!byte $02,$30,$ff,$ff	; dungeon 0
+		!byte $ff,$ff,$ff,$ff	; dungeon 1
+		!byte $ff,$ff,$ff,$ff	; dungeon 2
+		!byte $ff,$ff,$ff,$ff	; dungeon 3
+		!byte $ff,$ff,$ff,$ff	; dungeon 4
+		!byte $ff,$ff,$ff,$ff	; dungeon 5
+		!byte $ff,$ff,$ff,$ff	; dungeon 6
+		!byte $ff,$ff,$ff,$ff	; dungeon 7
+
+
+
+; --------------------------------------------
+;  Persistent changes (introduced by switches)
+;  labels start with "pc_" and allow up to 7
+;  tiles per map to change persistently (between loads.) 
+;  This index refers to offsets in the target
+;  lists below it, depending on which map
+;  we're currently playing in.
+; --------------------------------------------
+pc_map_idx	; Do not modify this table!
+		!byte $00
+		!byte pc_target_list_d0-pc_target_list_base
+		!byte pc_target_list_d1-pc_target_list_base
+		!byte pc_target_list_d2-pc_target_list_base
+		!byte pc_target_list_d3-pc_target_list_base
+		!byte pc_target_list_d4-pc_target_list_base
+		!byte pc_target_list_d5-pc_target_list_base
+		!byte pc_target_list_d6-pc_target_list_base
+
+; byte sequences of room pos, tile pos, and tile idx.
+; Do not modify these tables! They are used as storage for switch effects.
+pc_target_list_base
+pc_target_list_outdoor
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d1
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d2
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d3
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d4
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d5
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+pc_target_list_d6
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff
+
+persistent_vars_end
 end_code_c000
 
 
