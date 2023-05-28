@@ -1,5 +1,8 @@
 !sl	"d0tables_labels.a"
 !to	"d0tables.prg", cbm
+!source "coretables_labels.a"
+
+
 
 f_base = 64
 
@@ -441,11 +444,11 @@ BossAnimTable
 		; Idle frames
 		!byte 0, 1, 0, 1
 		; Attack frames
-		!byte 0, 2, 0, 2
+		!byte 0, 1, 0, 1
 		; Move frames
 		!byte 0, 1, 0, 1
 		; Hide frames
-		!byte 3, 0, 3, 0
+		!byte 0, 1, 0, 1
 		; Death frames
 		!byte 4, 5, 6, 7
 
@@ -616,5 +619,6 @@ enemy_y_force_by_dir
 sword_swing
 		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
 
-
+boss_behavior
+		rts
 d0tables_end

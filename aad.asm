@@ -204,8 +204,8 @@ MapRatDungeon = 8
 PlayerPowerState = $5b
 PrevMapID = $5c
 
-; Animation counter
-AnimCounter = $5f	; For each sprite
+; Animation counter (defined in coretables.asm!)
+;AnimCounter = $5f	; For each sprite
 
 KeyStopper = $60	; KeyStopper, when a key is held down to prevent repetition.
 RandomDir = $61
@@ -252,6 +252,19 @@ CurrentMobType=$c1
 CurrentEnemyDir=$c2
 FinalEnemyAnimState=$c3
 
+; -------------------------------
+;  Text characters locations + 
+;  symbol codes per map
+; -------------------------------
+txt_sp = 32
+txt_start = 1
+num_start = 48
+txt_heart = 36
+txt_key = 37
+txt_coin = 38
+txt_slash = 39
+; -------------------------------
+
 ; ---------------------------------
 ; Scroll and transfer state values
 ; ---------------------------------
@@ -265,13 +278,6 @@ state_transfer_unpack = 5
 state_transfer_draw_back = 6
 state_transfer_draw_front = 7
 state_transfer_end = 8
-
-; ----------------------
-; Player and HUD data
-; ----------------------
-player = 0 	; (in indexes 0-15)
-weapon = 1
-enemy = 2
 
 max_enemies = 6
 items = 16
@@ -3180,6 +3186,7 @@ setup
 softsetup
 		jsr gen_tilepos_tables
 		jsr clear_coretable_vars
+		jsr gen_sine_table
 
 		; set charset at $4800, screen at $4000
 		lda #$02
@@ -4125,6 +4132,42 @@ clear_coretable_vars
 		inx
 		bne -
 		rts
+
+; -------------------------------------------------
+;  Generate an approximate sine table
+; -------------------------------------------------
+gen_sine_table
+		ldy #$3f
+		ldx #$00
+
+-		lda value
+		clc
+		adc delta
+		sta value
+		lda value+1
+		adc delta+1
+		sta value+1
+
+		sta sine+$c0,x
+		sta sine+$80,y
+		eor #$ff
+		sta sine+$40,x
+		sta sine+$00,y
+
+		lda delta
+		adc #$10
+		sta delta
+		bcc +
+			inc delta+1
+
++		inx
+		dey
+		bpl -
+
+		rts
+
+value		!word $00
+delta		!word $00
 
 ;-----------------------------------------------------------
 end_code_800
@@ -7587,7 +7630,7 @@ skip_status	; else
 			asl
 			clc
 			adc AnimFrame	; reuse anim counter
-			tay
+			tay		; Store animation frame and state index in y (animates enemies, bosses and NPCs)
 			lda CurrentMobTypes,x
 			cmp #$80
 			bne +				; if (CurrentMobTypes == NPC(0))
@@ -8104,7 +8147,7 @@ store_mob			sta $0000		; will be initialized with CurrentMobTypes list address
 			lda mobtable_lootidx,y	; get mob loot table index
 			sta enemy_lootidx,x
 			cpy #$80
-			bcs +
+			bcs +	; branch if it's an NPC
 				lda mob_fill_table,y
 				sta color+enemy+16,x		; set mob fill color
 				cpy #$0e
@@ -8124,7 +8167,7 @@ _skip_boss_fill			lda mob_contour_table,y
 					sta color+enemy+9,x
 					sta color+enemy+10,x
 _skip_boss_contours		jmp ++
-+
++			; It's an NPC, set the correct sprite
 			tya
 			and #$0f	; Slice off MSB
 			tay
@@ -8133,7 +8176,8 @@ _skip_boss_contours		jmp ++
 			sta color+enemy+16,x		; set NPC fill color
 			lda npc_contour_table,y
 			sta color+enemy,x		; set NPC contour color
-++
+
+++			; Common stuff
 			lda #0
 			sta enemy_pull_force_x,x
 			sta enemy_pull_force_y,x
@@ -8793,17 +8837,16 @@ move_boss_2x2
 
 		; Move in the stored direction
 		stx tmp4		; store enemy (sprite) index
-		stx tmp3
 		ldy enemy_dir,x
+		sty CurrentEnemyDir
 		lda move_enemy_dir_x,y
 		beq ++
 		bpl +
-		ldy #4
--			inx
+			inx
 			inx
 			jsr get_tile_left_of_sprite
-			jsr check_enemy_blocking_tile_b1
-			bcs _enemy_stop_moving_b1
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving_b1
 			ldx tmp4	; load enemy (sprite) index
 			lda xtablehi+enemy,x
 			bne +++
@@ -8811,22 +8854,15 @@ move_boss_2x2
 				cmp #xoffset+24
 				bcc _enemy_stop_moving_b1
 +++			jsr move_enemy_left
-			inx
-			inx
-			stx tmp4	; store enemy (sprite) index
-			dey
-			bne -
 			lda #EnemyRunWest
-			jmp +++
+			sta FinalEnemyAnimState
+			jmp ++
 
-+		ldy #4
-			clc
-			txa
-			adc #5
-			tax
++			inx
+			inx			
 			jsr get_tile_right_of_sprite
-			jsr check_enemy_blocking_tile_b1
-			bcs _enemy_stop_moving_b1
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving_b1
 			ldx tmp4	; load enemy (sprite) index
 			lda xtablehi+enemy,x
 			beq ++++
@@ -8834,78 +8870,53 @@ move_boss_2x2
 				cmp #xoffset+16
 				bcs _enemy_stop_moving_b1
 ++++			jsr move_enemy_right
-			inx
-			inx
-			stx tmp4	; store enemy (sprite) index
-			dey
-			bne -
 			lda #EnemyRunEast
-			jmp +++
-; ---------------
-check_enemy_blocking_tile_b1
-		; Check if enemy ran into a blocking tile.
-		tay
-		lda collision_map,y
-		cmp #ct_block	; if carry is set, then enemy has run into a blocking tile.
-		bcs +
-		lda #0
-		rts
-+		lda #1
-		rts
+			sta FinalEnemyAnimState
+			jmp ++
 ; ---------------
 _enemy_stop_moving_b1
 		; Enemy ran into a tile => Go idle and wait to make a decision.
-		ldx tmp3
+		ldx tmp4
 
 		lda #EnemyIdle
 		sta enemy_state,x
 		jsr clone_coordinates_for_boss
 		rts			; return
 ; ---------------
-++
+++		ldx tmp4	; load enemy (sprite) index
+		ldy CurrentEnemyDir
 		lda move_enemy_dir_y,y
 		beq +++
 		bpl +
-		ldy #4
--			inx
+			inx
 			inx
 			jsr get_tile_above_sprite
-			jsr check_enemy_blocking_tile_b1
-			bcs _enemy_stop_moving_b1
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving_b1
 			ldx tmp4
 			lda ytable+enemy,x
 			cmp #yoffset+16
 			bcc _enemy_stop_moving_b1
 			jsr move_enemy_up
-			inx
-			inx
-			stx tmp4
-			dey
-			bne -
+			jsr boss_behavior
 			lda #EnemyRunNorth
-			jmp +++
+			jmp ++++
 
-+		ldy #4
-			txa
--			adc #5
-			tax
++			inx
+			inx
 			jsr get_tile_below_sprite
-			jsr check_enemy_blocking_tile_b1
-			bcs _enemy_stop_moving_b1
+			jsr check_enemy_blocking_tile
+			bne _enemy_stop_moving_b1
 			ldx tmp4
 			lda ytable+enemy,x
-			cmp #yoffset+160
+			cmp #yoffset+137
 			bcs _enemy_stop_moving_b1
 			jsr move_enemy_down
-			inx
-			inx
-			stx tmp4
-			dey
-			bne -
+			jsr boss_behavior
 			lda #EnemyRunSouth
-+++
-		ldx tmp3
-		sta enemy_anim_state,x
+			jmp ++++
++++		lda FinalEnemyAnimState
+++++		sta enemy_anim_state,x
 		jsr clone_coordinates_for_boss
 		rts
 

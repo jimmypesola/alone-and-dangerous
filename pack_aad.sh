@@ -7,94 +7,6 @@ function hex2dec {
 	echo $(printf "%d\n" $((16#$UCASE)))
 }
 
-PARTONE_END=$(grep end_code_800 aad_symbols.a | gawk '{print $3}')
-PARTTWO_END=$(grep end_code_3k aad_symbols.a | gawk '{print $3}')
-PARTTHREE_END=$(grep end_code_c000 aad_symbols.a | gawk '{print $3}')
-MAP_END=$(grep end_mapdata aad_symbols.a | gawk '{print $3}')
-ODTABLES_END=$(grep outdoortables_end aad_symbols.a | gawk '{print $3}')
-CORETABLES_END=$(grep coretables_end aad_symbols.a | gawk '{print $3}')
-
-PARTONE_END_HEX=${PARTONE_END:1:4}
-PARTTWO_END_HEX=${PARTTWO_END:1:4}
-PARTTHREE_END_HEX=${PARTTHREE_END:1:4}
-MAP_END_HEX=${MAP_END:1:4}
-ODTABLES_END_HEX=${ODTABLES_END:1:4}
-CORETABLES_END_HEX=${CORETABLES_END:1:4}
-
-PARTONE_END=$(hex2dec $PARTONE_END_HEX)
-PARTTWO_END=$(hex2dec $PARTTWO_END_HEX)
-PARTTHREE_END=$(hex2dec $PARTTHREE_END_HEX)
-MAP_END=$(hex2dec $MAP_END_HEX)
-ODTABLES_END=$(hex2dec $ODTABLES_END_HEX)
-CORETABLES_END=$(hex2dec $CORETABLES_END_HEX)
-
-BASEADDR=2049                    # $0801
-PARTONE_START=2049               # $0801
-PARTTWO_START=12288              # $3000
-PARTTHREE_START=49152            # $c000
-MAPLOC=28672                     # $7000
-MAPCOLSLOC=48640                 # $be00
-MAPTILESLOC=$(($MAPCOLSLOC+256)) # $bf00
-MUSICLOC=8192                    # $2000
-SPRITELOC=20480                  # $5000
-CHARSETLOC=18432                 # $4800
-ODTABLESLOC=57344                # $e000
-CORETABLESLOC=61440              # $f000
-
-
-PARTTWO_OFFSET=$(($PARTTWO_START-$BASEADDR))
-PARTTHREE_OFFSET=$(($PARTTHREE_START-$BASEADDR))
-MAPCOLS_OFFSET=$(($MAP_END-$BASEADDR))
-MAPTILES_OFFSET=$(($MAPCOLS_OFFSET+256))
-SPRITE_OFFSET=$(($SPRITELOC-$BASEADDR))
-CHARSET_OFFSET=$(($CHARSETLOC-$BASEADDR))
-ODTABLES_OFFSET=$(($ODTABLESLOC-$BASEADDR))
-CORETABLES_OFFSET=$(($CORETABLESLOC-$BASEADDR))
-
-PARTONE_LEN=$(($PARTONE_END-$PARTONE_START))
-PARTTWO_LEN=$(($PARTTWO_END-$PARTTWO_START))
-PARTTHREE_LEN=$(($PARTTHREE_END-$PARTTHREE_START))
-MAP_LEN=$(($MAP_END-$MAPLOC))
-MAPCOLS_LEN=256
-MAPTILES_LEN=256
-SPRITES_LEN=8192
-CHARSET_LEN=2048
-ODTABLES_LEN=$(($ODTABLES_END-$ODTABLESLOC))
-CORETABLES_LEN=$(($CORETABLES_END-$CORETABLESLOC))
-
-echo 'BASEADDR        ($0801) = '$BASEADDR
-echo 'PARTONE_START   ($0801) = '$PARTONE_START
-echo 'PARTONE_END     ($'$PARTONE_END_HEX') = '$PARTONE_END
-echo 'MUSICLOC        ($2000) = '$MUSICLOC
-echo 'MUSICLOC_END    ($3000) = 12288'
-echo 'PARTTWO_START   ($3000) = '$PARTTWO_START
-echo 'PARTTWO_END     ($'$PARTTWO_END_HEX') = '$PARTTWO_END
-echo 'CHARSETLOC      ($4800) = '$CHARSETLOC
-echo 'CHARSETLOC_END  ($5000) = 20480'
-echo 'SPRITELOC       ($5000) = '$SPRITELOC
-echo 'SPRITELOC_END   ($7000) = 28672'
-echo 'MAPLOC          ($7000) = '$MAPLOC
-echo 'MAPLOC_END      ($'$MAP_END_HEX') = '$MAP_END
-echo 'MAPCOLSLOC      ($be00) = '$MAPCOLSLOC
-echo 'MAPCOLSLOC_END  ($bf00) = 48896'
-echo 'MAPTILESLOC     ($bf00) = '$MAPTILESLOC
-echo 'MAPTILESLOC_END ($c000) = 49152'
-echo 'PARTTHREE_START ($c000) = '$PARTTHREE_START
-echo 'PARTTHREE_END   ($'$PARTTHREE_END_HEX') = '$PARTTHREE_END
-echo 'ODTABLESLOC     ($e000) = '$ODTABLESLOC
-echo 'ODTABLESLOC_END ($'$ODTABLES_END_HEX')'
-echo 'CORETABLESLOC   ($f000) = '$CORETABLESLOC
-echo 'CORETABLESLOC_EN($'$CORETABLES_END_HEX')'
-
-
-echo PARTTWO_OFFSET = $PARTTWO_OFFSET
-echo PARTTHREE_OFFSET = $PARTTHREE_OFFSET
-echo MAPCOLS_OFFSET = $MAPCOLS_OFFSET
-echo MAPTILES_OFFSET = $MAPTILES_OFFSET
-echo SPRITE_OFFSET = $SPRITE_OFFSET
-echo CHARSET_OFFSET = $CHARSET_OFFSET
-echo CORETABLES_OFFSET = $CORETABLES_OFFSET
-
 DISKIMAGE_NAME=aad.d64
 MAIN_PRG=aadangerous
 MAIN_UNPACKED_PRG=aad_unpacked.prg
@@ -113,6 +25,19 @@ DUNGEON_0_TILES_BIN=aad_d0_tiles.bin
 DUNGEON_0_RLE=aad_d0_map.rle
 DUNGEON_0_SPRITES_BIN=aad_sprites_dungeon0.bin
 DUNGEON_0_TABLES_PRG=d0tables.prg
+
+BASEADDR=2049                    # $0801
+PARTONE_START=2049               # $0801
+PARTTWO_START=12288              # $3000
+PARTTHREE_START=49152            # $c000
+MAPLOC=28672                     # $7000
+MAPCOLSLOC=48640                 # $be00
+MAPTILESLOC=$(($MAPCOLSLOC+256)) # $bf00
+MUSICLOC=8192                    # $2000
+SPRITELOC=20480                  # $5000
+CHARSETLOC=18432                 # $4800
+ODTABLESLOC=57344                # $e000
+CORETABLESLOC=61440              # $f000
 
 
 # -- Short file names for 1541 floppy --
@@ -311,6 +236,89 @@ fi
 #
 
 ./compile_aad.sh
+
+PARTONE_END=$(grep end_code_800 aad_symbols.a | gawk '{print $3}')
+PARTTWO_END=$(grep end_code_3k aad_symbols.a | gawk '{print $3}')
+PARTTHREE_END=$(grep end_code_c000 aad_symbols.a | gawk '{print $3}')
+MAP_END=$(grep end_mapdata aad_symbols.a | gawk '{print $3}')
+ODTABLES_END=$(grep outdoortables_end aad_symbols.a | gawk '{print $3}')
+CORETABLES_END=$(grep coretables_end aad_symbols.a | gawk '{print $3}')
+
+PARTONE_END_HEX=${PARTONE_END:1:4}
+PARTTWO_END_HEX=${PARTTWO_END:1:4}
+PARTTHREE_END_HEX=${PARTTHREE_END:1:4}
+MAP_END_HEX=${MAP_END:1:4}
+ODTABLES_END_HEX=${ODTABLES_END:1:4}
+CORETABLES_END_HEX=${CORETABLES_END:1:4}
+
+PARTONE_END=$(hex2dec $PARTONE_END_HEX)
+PARTTWO_END=$(hex2dec $PARTTWO_END_HEX)
+PARTTHREE_END=$(hex2dec $PARTTHREE_END_HEX)
+MAP_END=$(hex2dec $MAP_END_HEX)
+ODTABLES_END=$(hex2dec $ODTABLES_END_HEX)
+CORETABLES_END=$(hex2dec $CORETABLES_END_HEX)
+
+PARTTWO_OFFSET=$(($PARTTWO_START-$BASEADDR))
+PARTTHREE_OFFSET=$(($PARTTHREE_START-$BASEADDR))
+MAPCOLS_OFFSET=$(($MAP_END-$BASEADDR))
+MAPTILES_OFFSET=$(($MAPCOLS_OFFSET+256))
+SPRITE_OFFSET=$(($SPRITELOC-$BASEADDR))
+CHARSET_OFFSET=$(($CHARSETLOC-$BASEADDR))
+ODTABLES_OFFSET=$(($ODTABLESLOC-$BASEADDR))
+CORETABLES_OFFSET=$(($CORETABLESLOC-$BASEADDR))
+
+PARTONE_LEN=$(($PARTONE_END-$PARTONE_START))
+PARTTWO_LEN=$(($PARTTWO_END-$PARTTWO_START))
+PARTTHREE_LEN=$(($PARTTHREE_END-$PARTTHREE_START))
+MAP_LEN=$(($MAP_END-$MAPLOC))
+MAPCOLS_LEN=256
+MAPTILES_LEN=256
+SPRITES_LEN=8192
+CHARSET_LEN=2048
+ODTABLES_LEN=$(($ODTABLES_END-$ODTABLESLOC))
+CORETABLES_LEN=$(($CORETABLES_END-$CORETABLESLOC))
+
+echo ''
+echo '----------------------------------------------'
+echo '       Start and end addresses of data'
+echo '----------------------------------------------'
+echo 'BASEADDR        ($0801) = '$BASEADDR
+echo 'PARTONE_START   ($0801) = '$PARTONE_START
+echo 'PARTONE_END     ($'$PARTONE_END_HEX') = '$PARTONE_END
+echo 'MUSICLOC        ($2000) = '$MUSICLOC
+echo 'MUSICLOC_END    ($3000) = 12288'
+echo 'PARTTWO_START   ($3000) = '$PARTTWO_START
+echo 'PARTTWO_END     ($'$PARTTWO_END_HEX') = '$PARTTWO_END
+echo 'CHARSETLOC      ($4800) = '$CHARSETLOC
+echo 'CHARSETLOC_END  ($5000) = 20480'
+echo 'SPRITELOC       ($5000) = '$SPRITELOC
+echo 'SPRITELOC_END   ($7000) = 28672'
+echo 'MAPLOC          ($7000) = '$MAPLOC
+echo 'MAPLOC_END      ($'$MAP_END_HEX') = '$MAP_END
+echo 'MAPCOLSLOC      ($be00) = '$MAPCOLSLOC
+echo 'MAPCOLSLOC_END  ($bf00) = 48896'
+echo 'MAPTILESLOC     ($bf00) = '$MAPTILESLOC
+echo 'MAPTILESLOC_END ($c000) = 49152'
+echo 'PARTTHREE_START ($c000) = '$PARTTHREE_START
+echo 'PARTTHREE_END   ($'$PARTTHREE_END_HEX') = '$PARTTHREE_END
+echo 'ODTABLESLOC     ($e000) = '$ODTABLESLOC
+echo 'ODTABLESLOC_END ($'$ODTABLES_END_HEX')'
+echo 'CORETABLESLOC   ($f000) = '$CORETABLESLOC
+echo 'CORETABLESLOC_EN($'$CORETABLES_END_HEX')'
+
+echo '----------------------------------------------'
+
+echo PARTTWO_OFFSET = $PARTTWO_OFFSET
+echo PARTTHREE_OFFSET = $PARTTHREE_OFFSET
+echo MAPCOLS_OFFSET = $MAPCOLS_OFFSET
+echo MAPTILES_OFFSET = $MAPTILES_OFFSET
+echo SPRITE_OFFSET = $SPRITE_OFFSET
+echo CHARSET_OFFSET = $CHARSET_OFFSET
+echo CORETABLES_OFFSET = $CORETABLES_OFFSET
+
+echo '----------------------------------------------'
+echo ''
+
 
 echo =======================================================================
 echo ======================== Main PRG =====================================

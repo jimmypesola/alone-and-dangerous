@@ -1,6 +1,6 @@
 !sl	"outdoortables_labels.a"
 !to	"outdoortables.prg", cbm
-
+!source "coretables_labels.a"
 
 ; ----------------------
 ;  Enemy frame constants
@@ -591,5 +591,15 @@ enemy_y_force_by_dir
 ;		  <absolute note value n = [n >$81, n < $c0] >, ...
 sword_swing
 		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
+
+boss_behavior
+		clc
+		lda AnimCounter
+		asl
+		tay
+		lda sine,y
+		adc ytable+enemy,x
+		sta ytable+enemy,x
+		rts
 
 outdoortables_end
