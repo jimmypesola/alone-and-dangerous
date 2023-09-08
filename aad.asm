@@ -321,7 +321,7 @@ PlayerStateStartLootChest = 10
 PlayerStateLootChest = 11
 PlayerStateSwitchMap = 12
 PlayerStatePullSwitch = 13
-PlayerStatePullingSwitch = 14
+PlayerStateBusy = 14
 
 ; ----------------------
 ; Enemy animation state values
@@ -415,7 +415,6 @@ c_right		= 3
 ;
 ;; 16-bit mob data currently on screen
 ;CurrentMobTypes = 	$f064	; list of up to 9 bytes
-;MobSrc =		$f06c	; 2-byte address where mob data is fetched
 ;
 ;-----------------------------------------------------------
 ; tile-to-screen lookup tables
@@ -1133,6 +1132,17 @@ player_read_controls
 +
 		and #1 ; Check for space key (see status screen)
 		beq +
+			lda KeyStopper
+			and #$10
+			bne +
+			ora #$10
+			sta KeyStopper
+
+			lda #32
+			sta PlayerBusyTimer
+			lda #PlayerStateBusy
+			sta PlayerState
+
 			jsr draw_inventory
 			jmp +++
 
@@ -1347,9 +1357,9 @@ allow_use_weapon_only
 
 					jmp ++++
 +++
-		; Reset keystopper
+		; Reset keystopper (both space and return)
 		lda KeyStopper
-		and #$df
+		and #$cf
 		sta KeyStopper
 ++++
 
@@ -2244,14 +2254,18 @@ get_index_from_map_coords
 get_random
 		inc x1
 		clc
-x1=*+1
+
+x1		= * + 1
 		lda #$00	;x1
-c1=*+1
+
+c1		= * + 1
 		eor #$c2	;c1
-a1=*+1
+
+a1		= * + 1
 		eor #$11	;a1
 		sta a1
-b1=*+1
+
+b1		= * + 1
 		adc #$37	;b1
 		sta b1
 		lsr
@@ -2429,8 +2443,8 @@ save_door_type
 ; - Used to convert a 240 element room index
 ;   starting at each row: 0, 16, 32, 48, 64, 80, 96, 128, 144, 160, 176, 192
 ;   to a 16 pixel stepped map y coordinate.
-; Recalculates a = a / 16 * 12
 ; Destroys y
+; Returns a = a / 16 * 12
 ; --------------------------------------------
 transform_a_div_16_mul_12
 
@@ -2477,8 +2491,8 @@ transform_a_div_16_mul_12
 ; transform_a_mul_16_div_12
 ; - Used to convert map offset y coordinate to a 240 element room index
 ;   starting at each row: 0, 16, 32, 48, 64, 80, 96, 128, 144, 160, 176, 192
-; Recalculates a = a * 16 / 12
 ; Destroys y,a
+; Returns a = a * 16 / 12
 ; --------------------------------------------
 transform_a_mul_16_div_12
 
@@ -3233,12 +3247,6 @@ softsetup
 		lda MultiColor2
 		sta $d023
 
-		; set mob source to world
-		lda #<world
-		sta MobSrc
-		lda #>world
-		sta MobSrc+1
-
 		; position the sprites
 		; -- get sprite coords via world coordinates
 		lda StartLocX,x
@@ -3583,16 +3591,19 @@ spawn_loot
 		sta ytable+enemy,x
 		sta ytable+enemy+16,x
 
-		; TODO: Change this, not always a sword :-)
-		lda #f_sword+4
-		sta frame+enemy,x
-		lda #f_sword
+		ldy CurrentRoomIdx
+		lda extensions,y
+		tay
+		lda chests,y
+		tay
+		lda item_base,y		; load item frame fill data
 		sta frame+enemy+16,x
-
-		lda #col_f_sword
+		clc
+		adc #4			; step to item frame contour data
+		sta frame+enemy,x	
+		lda item_base+1,y	; load item frame fill color
 		sta color+enemy,x
-
-		lda #col_c_sword
+		lda item_base+2,y	; load item frame contour color
 		sta color+enemy+16,x
 
 		lda #0
@@ -3730,15 +3741,15 @@ draw_inventory
 			jsr swap_screen
 +
 		ldx #0
-		lda #0
+		lda #$20
 -			sta $4000,x
 			sta $4400,x
 			sta $4100,x
 			sta $4500,x
 			sta $4200,x
 			sta $4600,x
-			sta $42e7,x
-			sta $47e7,x
+			sta $42f8,x
+			sta $46f8,x
 			dex
 			bne -
 
@@ -3963,6 +3974,56 @@ inventory_interrupt0
 
 		lda items_mask+1
 		sta $d015
+
+		lda PlayerState
+		cmp #PlayerStateBusy
+		bne +
+			jsr player_busy
+			jmp ++
++
+		jsr read_keyboard
+		lda ScanResult
+		beq ++
+			lda KeyStopper
+			and #$10
+			bne ++
+				ora #$10
+				sta KeyStopper
+
+			lda #$1b	; Default settings, normal text mode, set raster high bit to 0
+			sta $d011
+			lda #$00	; Set main interrupt to happen at line 32
+			sta $d012
+
+			; Redraw screen
+			jsr swap_screen
+			jsr draw_screen
+			jsr swap_screen
+
+			; Reset sprites
+			ldx #8
+-				lda frame,x
+				sta spritepointer,x
+				lda frame+16,x
+				sta spritepointer+4,x
+				lda color,x
+				sta $d027
+				lda color+16,x
+				sta $d02b
+				dex
+				bpl -
+			sei
+			lda #10
+			sta PlayerBusyTimer
+			lda #PlayerStateBusy
+			sta PlayerState
+			ldx #$ff
+			txs
+			jmp main_routine
+++
+		lda KeyStopper
+		and #$ef
+		sta KeyStopper
 
 		inc $d019	; acknowledge raster irq.
 		lda $dc0d	; acknowledge pending irqs.	; acknowledge pending irqs.
@@ -4705,7 +4766,7 @@ ctrl_player
 			lda #1
 			jmp ctrl_player_end	; don't check edges!
 
-+		cmp #PlayerStatePullingSwitch
++		cmp #PlayerStateBusy
 		bne +
 			; Pulling switches is heavy work!
 			jsr player_busy
@@ -6254,9 +6315,22 @@ color_bottom
 ;-----------------------------------------------------------
 
 unpack_next_screen
-		; find room data via dictionary, fetch 16-bit dictionary entry by offx and offy
-		; first divide offx and offy by 20
+		; Each screen is RLE compressed (all map data also compressed with LZW on disk)
+		; so uncompress the next screen data to the tile buffer here, so it can be 
+		; drawn to screen directly from there later.
+		; Find room data via dictionary, fetch 16-bit dictionary entry by offx and offy
+		; coordinates.
 
+		; tmp_addr pointer stores the base address of the dictionary data. The dictionary
+		; only holds 16 bit addresses to the compressed data of each room/screen. 
+
+		; tmp_addr2 pointer stores the source address of the actual compressed data of a screen.
+		;    It will be pointed to from the address of tmp_addr.
+		;
+		;    Each unit of data is a 16 bit word with tile ID and how many tiles with this
+		;    ID were found while stepping ahead on x..
+
+		; Initialize working pointer to zero, so we can calculate.
 		lda #0
 		sta tmp_addr
 		sta tmp_addr+1
@@ -6265,7 +6339,8 @@ unpack_next_screen
 		sta tmp
 		lda offx
 
-		; divide offx by 20 to get screen x
+		; First divide offx by 20 and offy by 12 to get coordinates in tile space.
+		; divide offx by 20 to get screen x:
 		ldx #0
 		sec
 -		inx
@@ -6279,7 +6354,7 @@ unpack_next_screen
 
 		lda offy
 
-		; divide offy by 12 to get screen y
+		; divide offy by 12 to get screen y:
 		ldx #0
 		sec
 -		inx
@@ -7534,7 +7609,7 @@ exitinter
 			sta $d015
 			jsr change_switch_state
 
-			lda #PlayerStatePullingSwitch
+			lda #PlayerStateBusy
 			sta PlayerState
 
 			jmp +++++
@@ -7953,11 +8028,11 @@ setup_enemies
 		bne -
 
 
-		; LOAD MOBS ; TODO: Can be simplified. Get rid of MobSrc, replace with world. Get rid of mobs_entries_list
+		; LOAD MOBS ; TODO: Can be simplified. Get rid of mobs_entries_list
 		; prepare source address
-		lda MobSrc
+		lda #<world
 		sta tmp_addr
-		lda MobSrc+1
+		lda #>world
 		sta tmp_addr+1
 
 		; Get mobdata from the right place
@@ -7965,8 +8040,6 @@ setup_enemies
 
 		; get mob data from world / dungeons
 		lda (tmp_addr),y
-		tay
-		lda mobs_entries_list,y			; get current mob entry in list
 		tay
 
 		; set correct address for lda operation at store_mob
@@ -8641,7 +8714,7 @@ check_player_looting_enemy
 		bne +++
 			; TODO: add arrows
 			jmp ++
-		; ------------------+++
+		; ------------------
 +++
 		; ------------------
 		; Sword
@@ -8655,6 +8728,19 @@ check_player_looting_enemy
 			jmp ++
 		; ------------------
 +++
+		; ------------------
+		; Axe
+		; ------------------
+		cmp #f_axe
+		bne +++
+			lda InvAxe
+			sta WeaponList
+			inc WeaponListLen
+			inc SelWeapon
+			jmp ++
+		; ------------------
++++
+
 		rts
 		; ------------------
 		; TODO: More loot
@@ -9058,13 +9144,13 @@ player_start_attack
 
 
 		;     I   N   V   E   N   T   O   R   Y
-text_inv	!byte $c9,$ce,$d6,$c5,$ce,$d4,$cf,$d2,$d9
+text_inv	!byte $09,$0e,$16,$05,$0e,$14,$0f,$12,$19
 		;         I   T   E   M   S
-text_items	!byte $c0,$c9,$d4,$c5,$cd,$d3,$c0
+text_items	!byte $20,$09,$14,$05,$0d,$13,$20
 		;         W   E   A   P   O   N   S
-text_weapons	!byte $c0,$d7,$c5,$c1,$d0,$cf,$ce,$d3,$c0
+text_weapons	!byte $20,$17,$05,$01,$10,$0f,$0e,$13,$20
 		;     -   S   P   A   C   E   -
-text_space	!byte $e6,$d3,$d0,$c1,$c3,$c5,$e6
+text_space	!byte $1b,$13,$10,$01,$03,$05,$1b
 
 fire_color	!byte $02,$0a,$07,$01,$01,$07,$0a,$02
 magical_color	!byte $01,$15,$14,$06,$06,$14,$15,$01
@@ -9130,7 +9216,6 @@ CurrentRoomIdx	!byte $00	; 1-byte room index on map
 
 ; 16-bit mob data currently on screen
 CurrentMobTypes	!byte $00,$00,$00,$00,$00,$00,$00,$00,$00	; list of up to 9 bytes
-MobSrc		!word $0000	; 2-byte address where mob data is fetched
 
 ; Each world/dungeon has up to two bosses. This array defines room and tile position of each boss.
 ; It is checked each time a room is entered, and the location matches the room position and position within the room (2nd byte).

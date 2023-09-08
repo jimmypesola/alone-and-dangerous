@@ -61,6 +61,7 @@ col_f_gold	= $07
 col_f_potion	= $06
 col_f_arrows	= $07
 col_f_sword	= $01
+col_f_axe	= $01
 
 col_c_nothing	= $00	; contour colors
 col_c_heart	= $02
@@ -68,6 +69,7 @@ col_c_gold	= $01
 col_c_potion	= $00
 col_c_arrows	= $01
 col_c_sword	= $03
+col_c_axe	= $0f
 
 ; ----------------------
 ; Tile indices
@@ -131,7 +133,7 @@ doorexits	; Exit tile position on *target* screen if door exists on that screen.
 		; f0-ff indicates offset in "doorexitsmulti".
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
-		!byte $00,$00,$8d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $10
+		!byte $00,$00,$8e,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $10
 		!byte $5f,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $20
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $30
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $40
@@ -150,11 +152,11 @@ doorexitsmulti
 		!byte $ff,$ff,$ff,$ff,$ff,$ff
 
 ; extensions
-;		$00-$3f = locked doors (if tile #1 then must magically be revealed) (position) (if tile #2 then reference to loot_trigger table instead)
-;		$40-$7f = chests (position, content)
-;		$80-$bf = destroyable blocks (not stones! they are all breakable.) (position, content)
+;		$00-$3f = locked doors/chests (if tile #1 then must magically be revealed) (position) (if tile #2 then reference to loot_trigger table instead)
+;		$40-$bf = destroyable blocks (not stones! they are all breakable.) (position, content)
 ;		$c0-$ef = runestones (spells) (spell number) or triggers when looting an item
 ;		$f0-$fe = switches (refers to two-state switchlist table 'switch_lists', max 14 entries) (position ref list ending with $ff)
+;		$ff     = nothing
 
 ; notes:        - If $00-$3f but no door nor grass, then reveal a life container instead.
 extensions
@@ -174,16 +176,14 @@ extensions
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff
 
-; screen tile positions for:
-locked_doors		; $00 - $3f
-		!byte loot_trig0-loot_triggers
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+; chest items
+chests		; $00 - $3f
+		!byte item_axe-item_base
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
-; screen tile positions and content for:
-chests			; $40 - $7f
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 ; screen tile positions and content for:
 destroyable_blocks	; $80 - $bf
 		!byte $ff
@@ -238,13 +238,10 @@ swtarget5	!byte $ff, $ff, 0, 0
 swtarget6	!byte $ff, $ff, 0, 0
 swtarget7	!byte $ff, $ff, 0, 0
 
-loot_triggers
-		; (screen pos, sprite frame)
-loot_trig0	!byte $48,f_sword,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-
+; weapon frames + colors
+item_base
+item_axe	!byte f_axe, col_f_axe, col_c_axe, $ff
+item_sword	!byte f_sword, col_f_sword, col_c_sword, $ff
 
 ; -------------------------------------------------
 ; MOB DATA
@@ -280,63 +277,54 @@ mobs_entries
 ;         40 - Boss     (rat boss)
 ;         41 - Boss     (Knight boss)
 ;         80 - NPC 0    (A NPC, salesman?)
-; $00
 grp_nothing
+		; $00	<= offset
 		!byte $00		; empty room
-; $01
 grp_4x_blueknights
+		; $01
 		!byte $01,$07,$04	; # of groups; type (up to 256); qty in group x; type; qty in group x+1; ...
-; $02
 grp_4x_blueskellies
+		; $04
 		!byte $01,$06,$04
-; $03
 grp_4x_greenknights
+		; $07
 		!byte $01,$03,$04
-; $04
 grp_4x_bluespiders
+		; $0a
 		!byte $01,$05,$04
-; $05
 grp_4x_greenskellies
+		; $0d
 		!byte $01,$02,$04
-; $06
 grp_4x_greenspiders
+		; $10
 		!byte $01,$01,$04
-; $07
 grp_4x_greenslimes
+		; $13
 		!byte $01,$00,$04
-; $08
 grp_1x_greenskelly
+		; $16
 		!byte $01,$02,$01
-; $09
 grp_1x_greenslime
+		; $19
 		!byte $01,$00,$01
-; $0a
 grp_6x_greenspiders
+		; $1c
 		!byte $01,$01,$06
-; $0b
 grp_2x_greenslime
+		; $1f
 		!byte $01,$00,$02
-; $0c
 grp_2x_rat
+		; $22
 		!byte $01,$01,$02
-; $0d
 grp_6x_bats
+		; $25
 		!byte $01,$0c,$06
-; $0e
 grp_0e_not_used
+		; $28
 		!byte $00,$00,$00
-; $0f
 grp_1x_ratboss
+		; $2b
 		!byte $01,$0f,$01
-
-
-
-mobs_entries_list	; room for enemy configurations
-		!byte $00,$01,$04,$07,$0a,$0d,$10,$13,$16,$19,$1c,$1f,$22,$25,$28,$2b
-		!byte $2e,$31,$34,$37,$3a,$3d,$40,$43,$46,$49,$4c,$4f,$52,$55,$58,$5b
-		!byte $5e,$61,$64,$67,$6a,$6d,$70,$73,$76,$79,$7c,$7f,$82,$85,$88,$8b
-		!byte $8e,$91,$94,$97,$9a,$9d,$a0,$a3,$a6,$a9,$ac,$af,$b2,$b5,$b8,$bb
-		!byte $be,$c1,$c4,$c7,$ca,$cd,$d0,$d3,$d6,$d9,$dc,$df,$e2,$e5,$e8,$eb
 
 ;-----------------------------------------------------------
 ; Level data constants (occupies $d0 bytes = 208 bytes)
@@ -345,9 +333,9 @@ world
 		; mobs_entries references, see mobs_entries table above. (not mob_entries_list)
 
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$00,$0f,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
-		!byte $0d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
-		!byte $0c,$00,$0d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
+		!byte $00,$00,$2b,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
+		!byte $25,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
+		!byte $22,$00,$25,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
@@ -397,6 +385,7 @@ AnimTable
 		!byte $40,$48,$50,$58
 		; Death
 		!byte f_death,f_death+1,f_death+2,f_death+3
+
 EnemyAnimTable
 		; BAT
 		; Run south

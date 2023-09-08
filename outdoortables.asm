@@ -55,6 +55,7 @@ col_f_gold	= $07
 col_f_potion	= $06
 col_f_arrows	= $07
 col_f_sword	= $01
+col_f_axe	= $01
 
 col_c_nothing	= $00	; contour colors
 col_c_heart	= $02
@@ -62,6 +63,7 @@ col_c_gold	= $01
 col_c_potion	= $00
 col_c_arrows	= $01
 col_c_sword	= $03
+col_c_axe	= $0f
 
 ; ----------------------
 ; Tile indices
@@ -157,30 +159,29 @@ doorexitsmulti
 ; notes:        - If $00-$3f but no door nor grass, then reveal a life container instead.
 extensions
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $00,$80,$81,$ff,$c0,$82,$ff,$83,$ff,$84,$85,$ff,$86,$ff,$ff,$c1
-		!byte $ff,$ff,$ff,$87,$c2,$ff,$ff,$ff,$ff,$88,$c3,$40,$ff,$89,$ff,$ff
-		!byte $ff,$01,$8a,$ff,$ff,$ff,$8b,$8c,$02,$ff,$03,$ff,$8d,$ff,$04,$8e
-		!byte $8f,$90,$91,$ff,$ff,$ff,$92,$ff,$05,$ff,$ff,$ff,$ff,$93,$ff,$ff
-		!byte $ff,$c4,$94,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$95,$06,$96,$97,$98
-		!byte $ff,$ff,$ff,$99,$41,$ff,$07,$9a,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $9b,$ff,$ff,$9c,$ff,$ff,$ff,$9d,$ff,$9e,$ff,$ff,$9f,$a0,$ff,$a1
-		!byte $ff,$ff,$a2,$ff,$08,$ff,$a3,$ff,$a4,$ff,$ff,$ff,$ff,$ff,$ff,$09
+		!byte $00,$80,$81,$ff,$c0,$82,$ff,$83,$ff,$84,$85,$ff,$86,$ff,$ff,$c1	; $00
+		!byte $ff,$ff,$ff,$87,$c2,$ff,$ff,$ff,$ff,$88,$c3,$40,$ff,$89,$ff,$ff	; $10
+		!byte $ff,$01,$8a,$ff,$ff,$ff,$8b,$8c,$02,$ff,$03,$ff,$8d,$ff,$04,$8e	; $20
+		!byte $8f,$90,$91,$ff,$ff,$ff,$92,$ff,$05,$ff,$ff,$ff,$ff,$93,$ff,$ff	; $30
+		!byte $ff,$c4,$94,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$95,$06,$96,$97,$98	; $40
+		!byte $ff,$ff,$ff,$99,$41,$ff,$07,$9a,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $50
+		!byte $9b,$ff,$ff,$9c,$ff,$ff,$ff,$9d,$ff,$9e,$ff,$ff,$9f,$a0,$ff,$a1	; $60
+		!byte $ff,$ff,$a2,$ff,$08,$ff,$a3,$ff,$a4,$ff,$ff,$ff,$ff,$ff,$ff,$09	; $70
 		; -------------------------------------------------------------------
-		!byte $42,$43,$ff,$44,$45,$ff,$ff,$44,$45,$45,$45,$45,$46,$ff,$47,$c5
-		!byte $48,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff
+		!byte $42,$43,$ff,$44,$45,$ff,$ff,$44,$45,$45,$45,$45,$46,$ff,$47,$c5	; $80
+		!byte $48,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $90
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $a0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$00,$ff,$ff,$ff	; $b0
+		!byte $ff,$ff,$ff							; $c0
 
-; screen tile positions for:
-locked_doors		; $00 - $3f
+; pairs of (screen tile position, item) for:
+chests		; $00 - $3f
+		!byte item_sword-item_base
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
-; screen tile positions and content for:
-chests			; $40 - $7f
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 ; screen tile positions and content for:
 destroyable_blocks	; $80 - $bf
 		!byte $ff
@@ -231,13 +232,10 @@ swtarget5	!byte $ff, $ff, 0, 0
 swtarget6	!byte $ff, $ff, 0, 0
 swtarget7	!byte $ff, $ff, 0, 0
 
-loot_triggers
-		; (screen pos, sprite frame)
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-
+; weapon frames + colors
+item_base
+item_axe	!byte f_axe, col_f_axe, col_c_axe, $ff
+item_sword	!byte f_sword, col_f_sword, col_c_sword, $ff
 
 ; -------------------------------------------------
 ; MOB DATA
@@ -271,63 +269,54 @@ mobs_entries
 ;          f - knight   (orange - extreme)
 ;         10 - free
 ;         80 - NPC 0    (key giver for first "sword" chest)
-; $00
 grp_nothing
+		; $00
 		!byte $00		; empty room
-; $01
 grp_4x_blueknights
+		; $01
 		!byte $01,$07,$04	; # of groups; type[0]; qty in group[0]; type[1]; qty in group[1]; ...
-; $02
 grp_4x_blueskellies
+		; $04
 		!byte $01,$06,$04
-; $03
 grp_4x_greenknights
+		; $07
 		!byte $01,$03,$04
-; $04
 grp_4x_bluespiders
+		; $0a
 		!byte $01,$05,$04
-; $05
 grp_4x_greenskellies
+		; $0d
 		!byte $01,$02,$04
-; $06
 grp_4x_greenspiders
+		; $10
 		!byte $01,$01,$04
-; $07
 grp_4x_greenslimes
+		; $13
 		!byte $01,$00,$04
-; $08
 grp_1x_greenskelly
+		; $16
 		!byte $01,$02,$01
-; $09
 grp_1x_greenslime
+		; $19
 		!byte $01,$00,$01
-; $0a
 grp_6x_greenslime
+		; $1c
 		!byte $01,$00,$06
-; $0b
 grp_6x_greenspiders
+		; $1f
 		!byte $01,$01,$06
-; $0c
 grp_2x_greenslime
+		; $22
 		!byte $01,$00,$02
-; $0d
 grp_1x_npc_0
+		; $25
 		!byte $01,$80,$01
-; $0e
 grp_0e_not_used			; use this for NPC?
+		; $28
 		!byte $00,$00,$00
-; $0f
 grp_0f_not_used			; use this for NPC?
+		; $2b
 		!byte $00,$00,$00
-
-
-
-mobs_entries_list	; room for enemy configurations
-		!byte $00,$01,$04,$07,$0a,$0d,$10,$13,$16,$19,$1c,$1f,$22,$25,$28,$2b
-		!byte $2e,$31,$34,$37,$3a,$3d,$40,$43,$46,$49,$4c,$4f,$52,$55,$58,$5b
-		!byte $5e,$61,$64,$67,$6a,$6d,$70,$73,$76,$79,$7c,$7f,$82,$85,$88,$8b
-		!byte $8e,$91,$94,$97,$9a,$9d,$a0,$a3,$a6,$a9,$ac,$af,$b2,$b5,$b8,$bb
-		!byte $be,$c1,$c4,$c7,$ca,$cd,$d0,$d3,$d6,$d9,$dc,$df,$e2,$e5,$e8,$eb
 
 ;-----------------------------------------------------------
 ; Level data constants (occupies $d0 bytes = 208 bytes)
@@ -336,20 +325,20 @@ world
 		; mobs_entries references
 
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-		!byte $01,$02,$02,$02,$03,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
-		!byte $04,$04,$05,$05,$05,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
-		!byte $04,$06,$06,$05,$05,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
-		!byte $04,$06,$06,$07,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
-		!byte $04,$04,$06,$07,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
-		!byte $0a,$07,$06,$07,$06,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
-		!byte $09,$0b,$00,$06,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $06
-		!byte $00,$07,$08,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $07
+		!byte $01,$04,$04,$04,$07,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $00
+		!byte $0a,$0a,$0d,$0d,$0d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $01
+		!byte $0a,$10,$10,$0d,$0d,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $02
+		!byte $0a,$10,$10,$13,$13,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $03
+		!byte $0a,$0a,$10,$13,$13,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $04
+		!byte $1c,$13,$10,$13,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $05
+		!byte $19,$1f,$00,$10,$13,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $06
+		!byte $00,$13,$16,$13,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $07
 
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $08
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $09
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $0a
-		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0d,$00,$00,$00 ; $0b
+		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$25,$00,$00,$00 ; $0b
 		!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $0c
 
 		; Attack states [south, west, north, east]
