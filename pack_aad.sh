@@ -17,6 +17,7 @@ OUTDOOR_RLE=aad_map_big.rle
 CHARSET_ATTRS_BIN=aad_charset_attrs_big.bin
 TILES_BIN=aad_tiles_big.bin
 OUTDOOR_TABLES_PRG=outdoortables.prg
+OUTDOOR_TEXT_PRG=outdoortext.prg
 CORE_TABLES_PRG=coretables.prg
 
 DUNGEON_0_CHARSET_BIN=aad_d0_charset.bin
@@ -25,12 +26,14 @@ DUNGEON_0_TILES_BIN=aad_d0_tiles.bin
 DUNGEON_0_RLE=aad_d0_map.rle
 DUNGEON_0_SPRITES_BIN=aad_sprites_dungeon0.bin
 DUNGEON_0_TABLES_PRG=d0tables.prg
+DUNGEON_0_TEXT_PRG=d0text.prg
 
 BASEADDR=2049                    # $0801
 PARTONE_START=2049               # $0801
 PARTTWO_START=12288              # $3000
 PARTTHREE_START=49152            # $c000
 MAPLOC=28672                     # $7000
+TEXTLOC=48128                    # $bc00
 MAPCOLSLOC=48640                 # $be00
 MAPTILESLOC=$(($MAPCOLSLOC+256)) # $bf00
 MUSICLOC=8192                    # $2000
@@ -46,10 +49,12 @@ OUTDOOR_FILE=od
 OUTDOOR_SPRITES_FILE=ods
 OUTDOOR_CHARSET_FILE=odc
 OUTDOOR_TABLES_FILE=odt
+OUTDOOR_TEXT_FILE=odx
 DUNGEON_0_FILE=d0
 DUNGEON_0_SPRITES_FILE=d0s
 DUNGEON_0_CHARSET_FILE=d0c
 DUNGEON_0_TABLES_FILE=d0t
+DUNGEON_0_TEXT_FILE=d0x
 DUNGEON_1_FILE=d1
 DUNGEON_1_SPRITES_FILE=d1s
 DUNGEON_2_FILE=d2
@@ -110,7 +115,7 @@ echo ======================== Outdoor RLE Map ==============================
 echo =======================================================================
 
 # -- This command will crunch the main outdoor binary map (RLE packed) file and use the specified load address $5000, decrunched files will be relocated to $7000
-exomizer mem -l 0x6ffa $OUTDOOR_RLE@0x7000 $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC -o $OUTDOOR_FILE
+exomizer mem -l 0x6ffa $OUTDOOR_RLE@0x7000 $OUTDOOR_TEXT_PRG $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC -o $OUTDOOR_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
 	SIZE=$(ls -l $OUTDOOR_FILE | cut -d' ' -f 5)
@@ -182,8 +187,8 @@ echo =======================================================================
 echo ======================== Dungeon 0 RLE Map ============================
 echo =======================================================================
 
-# -- This command will crunch dungeon 0 binary map (RLE packed) file and use the specified load address $5000, decrunched files will be relocated to $7000
-exomizer mem -l 0x6ffa $DUNGEON_0_RLE@0x7000 $DUNGEON_0_CHARSET_ATTRS_BIN@$MAPCOLSLOC $DUNGEON_0_TILES_BIN@$MAPTILESLOC -o $DUNGEON_0_FILE
+# -- This command will crunch dungeon 0 binary map (RLE packed) file and use the specified load address $6ffa, decrunched files will be relocated to $7000
+exomizer mem -l 0x6ffa $DUNGEON_0_RLE@0x7000 $DUNGEON_0_TEXT_PRG $DUNGEON_0_CHARSET_ATTRS_BIN@$MAPCOLSLOC $DUNGEON_0_TILES_BIN@$MAPTILESLOC -o $DUNGEON_0_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
 	SIZE=$(ls -l $DUNGEON_0_FILE | cut -d' ' -f 5)
@@ -216,7 +221,7 @@ echo =======================================================================
 echo ======================== Dungeon 0 Charset ============================
 echo =======================================================================
 
-# -- This command will crunch dungeon 0 charset binary file and use the specified load address $0400, decrunched file will be relocated to $4800
+# -- This command will crunch dungeon 0 charset binary file and use the specified load address $47fe, decrunched file will be relocated to $4800
 exomizer mem -l 0x47fe $DUNGEON_0_CHARSET_BIN@0x4800 -o $DUNGEON_0_CHARSET_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
@@ -251,6 +256,7 @@ PARTONE_END=$(grep end_code_800 aad_symbols.a | gawk '{print $3}')
 PARTTWO_END=$(grep end_code_3k aad_symbols.a | gawk '{print $3}')
 PARTTHREE_END=$(grep end_code_c000 aad_symbols.a | gawk '{print $3}')
 MAP_END=$(grep end_mapdata aad_symbols.a | gawk '{print $3}')
+TEXT_END=$(grep odtext_end odtext.a | gawk '{print $3}')
 ODTABLES_END=$(grep outdoortables_end aad_symbols.a | gawk '{print $3}')
 CORETABLES_END=$(grep coretables_end aad_symbols.a | gawk '{print $3}')
 
@@ -258,6 +264,7 @@ PARTONE_END_HEX=${PARTONE_END:1:4}
 PARTTWO_END_HEX=${PARTTWO_END:1:4}
 PARTTHREE_END_HEX=${PARTTHREE_END:1:4}
 MAP_END_HEX=${MAP_END:1:4}
+TEXT_END_HEX=${TEXT_END:1:4}
 ODTABLES_END_HEX=${ODTABLES_END:1:4}
 CORETABLES_END_HEX=${CORETABLES_END:1:4}
 
@@ -265,6 +272,7 @@ PARTONE_END=$(hex2dec $PARTONE_END_HEX)
 PARTTWO_END=$(hex2dec $PARTTWO_END_HEX)
 PARTTHREE_END=$(hex2dec $PARTTHREE_END_HEX)
 MAP_END=$(hex2dec $MAP_END_HEX)
+TEXT_END=$(hex2dec $TEXT_END_HEX)
 ODTABLES_END=$(hex2dec $ODTABLES_END_HEX)
 CORETABLES_END=$(hex2dec $CORETABLES_END_HEX)
 
@@ -274,6 +282,7 @@ MAPCOLS_OFFSET=$(($MAP_END-$BASEADDR))
 MAPTILES_OFFSET=$(($MAPCOLS_OFFSET+256))
 SPRITE_OFFSET=$(($SPRITELOC-$BASEADDR))
 CHARSET_OFFSET=$(($CHARSETLOC-$BASEADDR))
+TEXT_OFFSET=$(($TEXTLOC-$BASEADDR))
 ODTABLES_OFFSET=$(($ODTABLESLOC-$BASEADDR))
 CORETABLES_OFFSET=$(($CORETABLESLOC-$BASEADDR))
 
@@ -281,6 +290,7 @@ PARTONE_LEN=$(($PARTONE_END-$PARTONE_START))
 PARTTWO_LEN=$(($PARTTWO_END-$PARTTWO_START))
 PARTTHREE_LEN=$(($PARTTHREE_END-$PARTTHREE_START))
 MAP_LEN=$(($MAP_END-$MAPLOC))
+TEXT_LEN=$(($TEXT_END-$TEXTLOC))
 MAPCOLS_LEN=256
 MAPTILES_LEN=256
 SPRITES_LEN=8192
@@ -305,6 +315,8 @@ echo 'SPRITELOC       ($5000) = '$SPRITELOC
 echo 'SPRITELOC_END   ($7000) = 28672'
 echo 'MAPLOC          ($7000) = '$MAPLOC
 echo 'MAPLOC_END      ($'$MAP_END_HEX') = '$MAP_END
+echo 'TEXTLOC         ($bc00) = '$TEXTLOC
+echo 'TEXTLOC_END     ($'$TEXT_END_HEX') = '$TEXT_END
 echo 'MAPCOLSLOC      ($be00) = '$MAPCOLSLOC
 echo 'MAPCOLSLOC_END  ($bf00) = 48896'
 echo 'MAPTILESLOC     ($bf00) = '$MAPTILESLOC
@@ -322,6 +334,7 @@ echo PARTTWO_OFFSET = $PARTTWO_OFFSET
 echo PARTTHREE_OFFSET = $PARTTHREE_OFFSET
 echo MAPCOLS_OFFSET = $MAPCOLS_OFFSET
 echo MAPTILES_OFFSET = $MAPTILES_OFFSET
+echo TEXT_OFFSET = $TEXT_OFFSET
 echo SPRITE_OFFSET = $SPRITE_OFFSET
 echo CHARSET_OFFSET = $CHARSET_OFFSET
 echo CORETABLES_OFFSET = $CORETABLES_OFFSET
@@ -334,7 +347,7 @@ echo =======================================================================
 echo ======================== Main PRG =====================================
 echo =======================================================================
 
-exomizer sfx basic,$BASEADDR -s 'lda #0 sta $d020' -x 'inc $d020 dec $d020' $MAIN_UNPACKED_PRG,$BASEADDR,,$PARTONE_LEN $MUSIC_BIN@$MUSICLOC $MAIN_UNPACKED_PRG,$PARTTWO_START,$PARTTWO_OFFSET,$PARTTWO_LEN $CHARSET_BIN@$CHARSETLOC $SPRITES_BIN@$SPRITELOC $OUTDOOR_RLE@$MAPLOC $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC $MAIN_UNPACKED_PRG,$PARTTHREE_START,$PARTTHREE_OFFSET,$PARTTHREE_LEN $OUTDOOR_TABLES_PRG,$ODTABLESLOC,,$ODTABLES_LEN $CORE_TABLES_PRG,$CORETABLESLOC,,$CORETABLES_LEN -o $MAIN_PRG
+exomizer sfx basic,$BASEADDR -s 'lda #0 sta $d020' -x 'inc $d020 dec $d020' $MAIN_UNPACKED_PRG,$BASEADDR,,$PARTONE_LEN $MUSIC_BIN@$MUSICLOC $MAIN_UNPACKED_PRG,$PARTTWO_START,$PARTTWO_OFFSET,$PARTTWO_LEN $CHARSET_BIN@$CHARSETLOC $SPRITES_BIN@$SPRITELOC $OUTDOOR_RLE@$MAPLOC $OUTDOOR_TEXT_PRG,$TEXTLOC,,$TEXT_LEN $CHARSET_ATTRS_BIN@$MAPCOLSLOC $TILES_BIN@$MAPTILESLOC $MAIN_UNPACKED_PRG,$PARTTHREE_START,$PARTTHREE_OFFSET,$PARTTHREE_LEN $OUTDOOR_TABLES_PRG,$ODTABLESLOC,,$ODTABLES_LEN $CORE_TABLES_PRG,$CORETABLESLOC,,$CORETABLES_LEN -o $MAIN_PRG
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
 	echo 'Packing main file was successful!'

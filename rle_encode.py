@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-# Python version of the map data compressor
-# On MSYS (Windows) it seems to be much faster than the Perl version.
+# Map data RLE compressor
 
 import sys
 import struct

@@ -1,11 +1,15 @@
 !sl	"outdoortables_labels.a"
 !to	"outdoortables.prg", cbm
 !source "coretables_labels.a"
+!source "const.asm"
+
+
+
+f_base		= 64
 
 ; ----------------------
 ;  Enemy frame constants
 ; ----------------------
-f_base		= 64
 f_death 	= f_base + 32
 f_blob 		= f_base + 82
 f_spider	= f_base + 88
@@ -56,6 +60,7 @@ col_f_potion	= $06
 col_f_arrows	= $07
 col_f_sword	= $01
 col_f_axe	= $01
+col_f_extra_heart = $01
 
 col_c_nothing	= $00	; contour colors
 col_c_heart	= $02
@@ -64,6 +69,7 @@ col_c_potion	= $00
 col_c_arrows	= $01
 col_c_sword	= $03
 col_c_axe	= $0f
+col_c_extra_heart = $02
 
 ; ----------------------
 ; Tile indices
@@ -74,29 +80,96 @@ TileChestOpenLeft = 62
 TileChestOpenRight = 63
 TileSwitchInactive = 37
 TileSwitchActive = 38
-
-; ----------------------
-;  Collision tiles
-; ----------------------
-; Collision type for each tile type
-ct_passable	= 0	; passable  - tile that can be walked over, enemies can spawn on it.
-ct_door		= 1	; door      - tile transports player to some destination on current or a different map.
-ct_block	= 2	; block     - unpassable block, enemies won't spawn on it.
-ct_tree		= 3	; tree      - as "ct_block" but can be removed with an axe.
-ct_chest	= 4	; chest     - interactive tile which can be opened and reveals an item.
-ct_locked	= 5	; locked    - a locked tile, usually a door.
-ct_runestone	= 6	; runestone - a tile, when interacted with, can teach a spell.
-ct_infostone	= 7	; infostone - a tile that can be read when interacted with.
-ct_crushable	= 8	; crushable - a tile that can be crushed with a (hammer).
-ct_movable	= 9	; movable   - a tile that can be moved by pushing it.
-ct_cenotaph	= 10	; cenotaph  - a grave, can spawn zombies/skeletons or other monsters if disturbed.
-ct_switch	= 11	; switch    - when interacted with it toggles its state, and can change other tiles.
-
-
+TileTree = 21
+TileRock = 37
+TileHatch = 13
+TileDoor = 14
 
 ;---------------------------------------------------------------------------------------------------------
-; Outdoor map specific data
-		*=$e000		; will be loaded here
+		*=$e000
+		; jump table specific to outdoor world
+		!byte <od_interact, >od_interact
+		!byte <od_boss_behavior, >od_boss_behavior
+
+;---------------------------------------------------------------------------------------------------------
+od_interact
+		; Don't allow looting chests while there are mobs
+		lda MobsPresent
+		cmp #2
+		bcs allow_use_weapon_only
+
+		; Check if next to chest or switch
+		lda plr_r_last_tileidx
+		cmp #TileChestClosedLeft
+		bne +
+			; save chest tile idx and location
+			sta tmp_chest_idx
+			lda plr_r_last_tilepos
+			sta tmp_chest_loc
+
+			; set loot timer
+			lda #100
+			sta PlayerBusyTimer
+			lda #PlayerStateStartLootChest
+			sta PlayerState
+			lda #1
+			rts
+
++		cmp #TileChestClosedRight
+		bne allow_use_weapon_only
+			; save chest tile idx and location
+			sta tmp_chest_idx
+			lda plr_r_last_tilepos
+			sta tmp_chest_loc
+
+			; set loot timer
+			lda #100
+			sta PlayerBusyTimer
+			lda #PlayerStateStartLootChest
+			sta PlayerState
+			lda #1
+			rts
+allow_use_weapon_only
+		lda plr_r_last_tileidx
+		cmp #TileTree
+		bne +
+			ldy #InvAxe
+			jsr check_weapon_presence
+			beq +
+			jmp ++
++		cmp #TileRock
+		bne +
+			ldy #InvGauntlet
+			jsr check_item_presence
+			beq +
+
+++			; save tree/rock tile idx and location
+			sta tmp_tree_idx
+			lda plr_r_last_tilepos
+			sta tmp_tree_loc
+
+			lda #PlayerStateDestroyTile
+			sta PlayerState
+			lda #1
+			rts
++
+		; else {
+		lda #2
+		rts ; }
+;---------------------------------------------------------------------------------------------------------
+od_boss_behavior
+	;	clc
+	;	lda AnimCounter
+	;	asl
+	;	tay
+	;	lda sine,y
+	;	adc ytable+enemy,x
+	;	sta ytable+enemy,x
+		rts
+;---------------------------------------------------------------------------------------------------------
+
+; Dungeon 0 map specific data will be loaded here:
+		*=$e100
 
 ;---------------------------------------------------------------------------------------------------------
 ; MAIN WORLD DOORS - Each cell here is a reference to another cell. Store on disk with world.
@@ -110,49 +183,57 @@ doortable	; e0-ef indicates offset in "doortablemulti". $f0-$fe are dungeons 1-1
 		!byte $9b,$9f,$ff,$ff,$ff,$9d,$9c,$ff,$95,$ff,$ff,$98,$ff,$ff,$ff,$ff ; $30
 		!byte $ff,$9e,$c0,$ff,$ff,$ff,$a1,$a2,$ff,$a3,$ff,$a6,$a5,$a7,$aa,$a8 ; $40
 		!byte $a9,$f0,$a0,$ab,$ff,$ac,$ad,$b4,$ff,$e1,$e2,$ff,$ff,$ff,$ff,$b5 ; $50
-		!byte $f1,$ff,$b6,$b8,$ff,$ff,$ff,$b9,$ff,$ba,$ff,$ff,$bb,$bf,$ff,$ff ; $60
+		!byte $f1,$ff,$e3,$b8,$ff,$ff,$ff,$b9,$ff,$ba,$ff,$ff,$bb,$bf,$ff,$ff ; $60
 		!byte $bc,$bd,$be,$ff,$ff,$ff,$a4,$c1,$c2,$ff,$ff,$ff,$ff,$ff,$ff,$ff ; $70
 		; --------------------------------------------------------------------------
-		!byte $03,$14,$23,$e3,$21,$11,$12,$05,$07,$09,$0a,$0c,$24,$1b,$1d,$0f ; $80
+		!byte $03,$14,$23,$e4,$21,$11,$12,$05,$07,$09,$0a,$0c,$24,$1b,$1d,$0f ; $80
 		!byte $28,$2e,$22,$26,$28,$38,$27,$2a,$3b,$2c,$2f,$30,$36,$35,$41,$31 ; $90
 		!byte $52,$46,$47,$49,$76,$4c,$4b,$4d,$4f,$50,$4e,$53,$55,$56,$59,$59 ; $a0
 		!byte $59,$5a,$5a,$5a,$57,$5f,$62,$60,$63,$67,$69,$6c,$70,$71,$72,$6d ; $b0 ; $b7 can be freed, referenced from $60 earlier
 		!byte $42,$77,$78                                                     ; $c0
 
+; Add any door destination screen positions here in the same order
+; as they are found if one would scan through the tile buffer from first to last
+; byte. End the list with a $ff value.
 doortablemulti
 		!byte $94,$90,$ff
 		!byte $ae,$af,$b0,$ff
 		!byte $b1,$b2,$b3,$ff
+		!byte $b6,$f2,$ff
 		!byte $01,$02,$ff
 
 doorexits	; Exit tile position on *target* screen if door exists on that screen.
-		; f0-ff indicates offset in "doorexitsmulti".
+		; e0-ef indicates offset in "doorexitsmulti".
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
 		!byte $00,$2b,$be,$2a,$00,$2b,$00,$be,$00,$be,$be,$00,$be,$00,$00,$2b ; $00
 		!byte $00,$3e,$33,$00,$be,$00,$00,$00,$00,$00,$00,$3e,$00,$33,$00,$00 ; $10
-		!byte $00,$2a,$be,$be,$be,$00,$be,$be,$f0,$00,$be,$00,$be,$00,$be,$be ; $20
+		!byte $00,$2a,$be,$be,$be,$00,$be,$be,$e0,$00,$be,$00,$be,$00,$be,$be ; $20
 		!byte $be,$be,$00,$00,$00,$2a,$2a,$00,$be,$00,$00,$be,$00,$00,$00,$00 ; $30
 		!byte $00,$2a,$be,$00,$00,$00,$3e,$33,$00,$be,$00,$be,$2a,$2a,$be,$be ; $40
-		!byte $be,$00,$2a,$be,$00,$2a,$be,$be,$00,$f1,$f2,$00,$00,$00,$00,$be ; $50
-		!byte $be,$00,$be,$be,$00,$00,$00,$be,$00,$be,$00,$00,$be,$2a,$00,$00 ; $60
+		!byte $be,$00,$2a,$be,$00,$2a,$be,$be,$00,$e1,$e2,$00,$00,$00,$00,$be ; $50
+		!byte $be,$00,$e3,$be,$00,$00,$00,$be,$00,$be,$00,$00,$be,$2a,$00,$00 ; $60
 		!byte $be,$be,$be,$00,$00,$00,$be,$3e,$33,$00,$00,$00,$00,$00,$00,$00 ; $70
 		; -------------------------------------------------------------------
-		!byte $36,$84,$a9,$f3,$6e,$39,$2a,$41,$92,$bf,$60,$6d,$80,$ae,$73,$3e ; $80
+		!byte $36,$84,$a9,$e4,$6e,$39,$2a,$41,$92,$bf,$60,$6d,$80,$ae,$73,$3e ; $80
 		!byte $af,$8f,$be,$6c,$6d,$2f,$d0,$6e,$6d,$5d,$18,$a5,$6b,$2e,$b6,$aa ; $90
 		!byte $90,$c5,$b7,$d4,$6c,$7d,$59,$40,$83,$40,$94,$1d,$b9,$81,$2a,$b9 ; $a0
 		!byte $bd,$3e,$31,$b5,$69,$92,$84,$82,$52,$40,$70,$7f,$80,$5e,$37,$ad ; $b0
 		!byte $a8,$58,$1a                                                     ; $c0
 
+; Add any door exit room positions here in the same order
+; as in doortablemulti. End each list with a $ff value.
 doorexitsmulti
 		!byte $2a,$be,$ff
 		!byte $be,$be,$be,$ff
 		!byte $3e,$33,$be,$ff
+		!byte $be,$be,$ff
 		!byte $34,$5a,$ff
 
 ; extensions
-;		$00-$3f = locked doors (if tile #1 then must magically be revealed) (position) (if tile #2 then reference to loot_trigger table instead)
-;		$40-$7f = chests (position, content)
-;		$80-$bf = destroyable blocks (not stones! they are all breakable.) (position, content)
+;		$00-$1f = locked doors (if tile #1 then must magically be revealed) (position) (if tile #2 then reference to loot_trigger table instead)
+;		$20-$3f = caption text pointers
+;		$40-$5f = chests (position, content)
+;		$80-$9f = destroyable blocks (not stones! they are all breakable.) (position, content)
 ;		$c0-$ef = runestones (spells) (spell number) or triggers when looting an item
 ;		$f0-$fe = switches (refers to two-state switchlist table 'switch_lists', max 14 entries) (position ref list ending with $ff)
 
@@ -160,18 +241,18 @@ doorexitsmulti
 extensions
 		;      0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
 		!byte $00,$80,$81,$ff,$c0,$82,$ff,$83,$ff,$84,$85,$ff,$86,$ff,$ff,$c1	; $00
-		!byte $ff,$ff,$ff,$87,$c2,$ff,$ff,$ff,$ff,$88,$c3,$40,$ff,$89,$ff,$ff	; $10
+		!byte $ff,$ff,$ff,$87,$c2,$ff,$ff,$ff,$ff,$88,$c3,$40,$ff,$89,$ff,$ff	; $10 ; <-- TODO: col 9?
 		!byte $ff,$01,$8a,$ff,$ff,$ff,$8b,$8c,$02,$ff,$03,$ff,$8d,$ff,$04,$8e	; $20
 		!byte $8f,$90,$91,$ff,$ff,$ff,$92,$ff,$05,$ff,$ff,$ff,$ff,$93,$ff,$ff	; $30
 		!byte $ff,$c4,$94,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$95,$06,$96,$97,$98	; $40
 		!byte $ff,$ff,$ff,$99,$41,$ff,$07,$9a,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $50
-		!byte $9b,$ff,$ff,$9c,$ff,$ff,$ff,$9d,$ff,$9e,$ff,$ff,$9f,$a0,$ff,$a1	; $60
+		!byte $ff,$ff,$9b,$9c,$ff,$ff,$ff,$9d,$ff,$9e,$ff,$ff,$9f,$a0,$ff,$a1	; $60
 		!byte $ff,$ff,$a2,$ff,$08,$ff,$a3,$ff,$a4,$ff,$ff,$ff,$ff,$ff,$ff,$09	; $70
 		; -------------------------------------------------------------------
 		!byte $42,$43,$ff,$44,$45,$ff,$ff,$44,$45,$45,$45,$45,$46,$ff,$47,$c5	; $80
 		!byte $48,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $90
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $a0
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$00,$ff,$ff,$ff	; $b0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$21,$ff,$ff,$ff,$ff,$ff,$60,$ff,$ff,$ff	; $b0
 		!byte $ff,$ff,$ff							; $c0
 
 ; pairs of (screen tile position, item) for:
@@ -182,12 +263,25 @@ chests		; $00 - $3f
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
-; screen tile positions and content for:
-destroyable_blocks	; $80 - $bf
-		!byte $ff
+; (screen tile position);
+;   tile_revelealed == f0 => tile = 0, spawn_loot = decided by chests table(?)
+destructible_block_pos	; $80 - $bf
+		!byte $96,$cc,$2d,$7e,$c0,$5f,$45,$af
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $6f,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$a5,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$36,$ff,$ff
+;(tile_revealed);
+destructible_block_cont	; $80 - $bf
+		!byte $07,$00,$0e,$0e,$0d,$0d,$00,$f0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $12,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$0d,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$0d,$ff,$ff
+
 ; content for:
 runestones		; $c0 - $ef
-		!byte $ff
+		!byte $ff,$ff
 
 switch_sets	; indices $f0 - $fe, values are offsets in switch_lists
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
@@ -495,6 +589,8 @@ npc_fill_table
 		!byte $05,$0e
 npc_contour_table
 		!byte $00,$00
+
+; loot lists
 loot_list
 		!byte f_nothing,f_heart,f_gold,f_potion
 loot_colors_fill
@@ -570,25 +666,14 @@ enemy_y_force_by_dir
 		!byte $06,$00,$fa,$00
 
 
-
 ; --------------------------------------------
-; SFX suite	
+; SFX suite
 ; 		format is: BYTE<8 bits>,BYTE<high 4 bits|low 4 bits>, ...
 ;		SFX format:
 ;		  <attack|decay>, <systain|release>, <1 byte pulse width (reversed high/low bytes)>,
-;		  <wave form value = [$10,$11,$20,$21,$40,$41,$80,$81]> OR 
+;		  <wave form value = [$10,$11,$20,$21,$40,$41,$80,$81]> OR
 ;		  <absolute note value n = [n >$81, n < $c0] >, ...
 sword_swing
 		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
-
-boss_behavior
-		clc
-		lda AnimCounter
-		asl
-		tay
-		lda sine,y
-		adc ytable+enemy,x
-		sta ytable+enemy,x
-		rts
 
 outdoortables_end

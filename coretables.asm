@@ -1,5 +1,8 @@
 !sl	"coretables_labels.a"
 !to	"coretables.prg", cbm
+!source "const.asm"
+
+
 
 ; game core specific data
 		*=$f000
@@ -81,5 +84,68 @@ plr_r_last_tileidx
 sine
 		!fill 256,0
 
+; data used by ctrl_player routine and its
+; subroutines:
+tmp_doorexit	!byte $00
+tmp_trans_xhi	!byte $00
+tmp_trans_xlo	!byte $00
+tmp_trans_y	!byte $00
+
+; Aliases to same storage
+tmp_chest_loc
+tmp_tree_loc
+sw_src_pos
+		!byte $00
+tmp_chest_idx
+tmp_tree_idx
+sw_src_tile
+		!byte $00
+
+sw_target_room	!byte $00
+sw_target_pos	!byte $00
+sw_target_tile	!byte $00
+sw_state	!byte $00
+sw_state_swa	!byte $00
+sw_tmp_y	!byte $00
+sw_tmp_x	!byte $00
+sw_cond		!byte $00
+
+; params: y = weapon # (InvSword, InvAxe, ...etc), must be > 0.
+; returns: a = 1 if present, 0 if not.
+check_weapon_presence
+		cpy #InvArrows
+		bne +
+			lda ArrowQ
+			sta item_value_adder
++		tya
+		and Weapons
+		bne +
+			rts
++		lda #1
+		clc
+		adc item_value_adder
+		rts
+
+; params: y = weapon # (InvSword, InvAxe, ...etc), must be > 0.
+; returns: a > 0 (1, 2 or 3 as power) if present, 0 if not present.
+check_item_presence
+		cpy #InvArmor
+		bne +
+			lda ArmorQ
+			sta item_value_adder
++		cpy #InvNecklace
+		bne +
+			lda NecklaceQ
+			sta item_value_adder
++		tya
+		and Items
+		bne +
+			rts
++		lda #1
+		clc
+		adc item_value_adder
+		rts
+item_value_adder
+		!byte $00
 
 coretables_end

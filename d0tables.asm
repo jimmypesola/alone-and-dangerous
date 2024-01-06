@@ -1,6 +1,7 @@
 !sl	"d0tables_labels.a"
 !to	"d0tables.prg", cbm
 !source "coretables_labels.a"
+!source "const.asm"
 
 
 
@@ -62,6 +63,7 @@ col_f_potion	= $06
 col_f_arrows	= $07
 col_f_sword	= $01
 col_f_axe	= $01
+col_f_extra_heart = $01
 
 col_c_nothing	= $00	; contour colors
 col_c_heart	= $02
@@ -70,6 +72,7 @@ col_c_potion	= $00
 col_c_arrows	= $01
 col_c_sword	= $03
 col_c_axe	= $0f
+col_c_extra_heart = $02
 
 ; ----------------------
 ; Tile indices
@@ -80,29 +83,95 @@ TileChestOpenLeft = 62
 TileChestOpenRight = 63
 TileSwitchInactive = 37
 TileSwitchActive = 38
-
-; ----------------------
-;  Collision tiles
-; ----------------------
-; Collision type for each tile type
-ct_passable	= 0	; passable  - tile that can be walked over, enemies can spawn on it.
-ct_door		= 1	; door      - tile transports player to some destination on current or a different map.
-ct_block	= 2	; block     - unpassable block, enemies won't spawn on it.
-ct_tree		= 3	; tree      - as "ct_block" but can be removed with an axe.
-ct_chest	= 4	; chest     - interactive tile which can be opened and reveals an item.
-ct_locked	= 5	; locked    - a locked tile, usually a door.
-ct_runestone	= 6	; runestone - a tile, when interacted with, can teach a spell.
-ct_infostone	= 7	; infostone - a tile that can be read when interacted with.
-ct_crushable	= 8	; crushable - a tile that can be crushed with a (hammer).
-ct_movable	= 9	; movable   - a tile that can be moved by pushing it.
-ct_cenotaph	= 10	; cenotaph  - a grave, can spawn zombies/skeletons or other monsters if disturbed.
-ct_switch	= 11	; switch    - when interacted with it toggles its state, and can change other tiles.
-
-
+TileTree = 21
+TileRock = 37
 
 ;---------------------------------------------------------------------------------------------------------
-; Dungeon 0 map specific data
-		*=$e000		; will be loaded here
+		*=$e000
+		; jump table specific to dungeon 0
+		!byte <d0_interact, >d0_interact
+		!byte <d0_boss_behavior, >d0_boss_behavior
+
+;---------------------------------------------------------------------------------------------------------
+d0_interact
+		; Don't allow looting chests while there are mobs
+		lda MobsPresent
+		cmp #2
+		bcs allow_use_weapon_only
+
+		; Check if next to chest or switch
+		lda plr_r_last_tileidx
+		cmp #TileChestClosedLeft
+		bne +
+			; save chest tile idx and location
+			sta tmp_chest_idx
+			lda plr_r_last_tilepos
+			sta tmp_chest_loc
+
+			; set loot timer
+			lda #100
+			sta PlayerBusyTimer
+			lda #PlayerStateStartLootChest
+			sta PlayerState
+			lda #1
+			rts
+
++		cmp #TileChestClosedRight
+		bne allow_use_weapon_only
+			; save chest tile idx and location
+			sta tmp_chest_idx
+			lda plr_r_last_tilepos
+			sta tmp_chest_loc
+
+			; set loot timer
+			lda #100
+			sta PlayerBusyTimer
+			lda #PlayerStateStartLootChest
+			sta PlayerState
+			lda #1
+			rts
+allow_use_weapon_only
+		lda plr_r_last_tileidx
+		cmp #TileSwitchInactive
+		bne +
+			; save switch tile idx and location
+			sta sw_src_tile
+			lda plr_r_last_tilepos
+			sta sw_src_pos
+
+			; set switch timer
+			lda #16
+			sta PlayerBusyTimer
+			lda #PlayerStatePullSwitch
+			sta PlayerState
+			lda #1
+			rts
+
++		cmp #TileSwitchActive
+		bne +
+			; save switch tile idx and location
+			sta sw_src_tile
+			lda plr_r_last_tilepos
+			sta sw_src_pos
+
+			; set switch timer
+			lda #16
+			sta PlayerBusyTimer
+			lda #PlayerStatePullSwitch
+			sta PlayerState
+			lda #1
+			rts
+
++		; else
+			lda #2
+			rts
+;---------------------------------------------------------------------------------------------------------
+d0_boss_behavior
+		rts
+;---------------------------------------------------------------------------------------------------------
+
+; Dungeon 0 map specific data will be loaded here:
+		*=$e100
 
 ;---------------------------------------------------------------------------------------------------------
 ; DUNGEON 0 DOORS  - Each cell here is a reference to another cell.
@@ -126,8 +195,11 @@ doortable	; e0-ef indicates offset in "doortablemulti". $f0-$fe are dungeons 1-1
 		!byte $ff,$ff,$ff                                                     ; $c0
 ; For multiple doors in one room
 doortablemulti
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff
+		!byte $ff,$ff,$ff
 
 doorexits	; Exit tile position on *target* screen if door exists on that screen.
 		; f0-ff indicates offset in "doorexitsmulti".
@@ -148,8 +220,11 @@ doorexits	; Exit tile position on *target* screen if door exists on that screen.
 		!byte $00,$00,$00                                                     ; $c0
 ; Exits for multiple doors in one room
 doorexitsmulti
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-		!byte $ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff
+		!byte $ff,$ff,$ff
 
 ; extensions
 ;		$00-$3f = locked doors/chests (if tile #1 then must magically be revealed) (position) (if tile #2 then reference to loot_trigger table instead)
@@ -185,11 +260,22 @@ chests		; $00 - $3f
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
 ; screen tile positions and content for:
-destroyable_blocks	; $80 - $bf
-		!byte $ff
+destructible_block_pos	; $80 - $bf
+		!byte $96,$cc,$2d,$7e,$c0,$5f,$45,$af
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $6f,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff
+destructible_block_cont	; $80 - $bf
+		!byte $07,$00,$0e,$0e,$0d,$0d,$00,$f0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $12,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $ff,$ff,$ff,$ff,$ff
+
 ; content for:
 runestones		; $c0 - $ef
-		!byte $ff
+		!byte $ff,$ff
 
 switch_sets	; indices $f0 - $fe, values are offsets in switch_lists
 		!byte $00,$02,$05,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
@@ -231,7 +317,7 @@ switch_7	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 swtargetbase
 swtarget0	!byte $21, $c2, 19, 2
 swtarget1	!byte $21, $d6, 19, 2
-swtarget2	!byte $22, $5c, 19, 2
+swtarget2	!byte $22, $5c, 42, 2
 swtarget3	!byte $12, $5a, 2, 20
 swtarget4	!byte $12, $a5, 19, 2
 swtarget5	!byte $ff, $ff, 0, 0
@@ -385,7 +471,6 @@ AnimTable
 		!byte $40,$48,$50,$58
 		; Death
 		!byte f_death,f_death+1,f_death+2,f_death+3
-
 EnemyAnimTable
 		; BAT
 		; Run south
@@ -523,6 +608,8 @@ npc_fill_table
 		!byte $05,$0e
 npc_contour_table
 		!byte $00,$00
+
+; loot lists
 loot_list
 		!byte f_nothing,f_heart,f_gold,f_potion
 loot_colors_fill
@@ -608,6 +695,4 @@ enemy_y_force_by_dir
 sword_swing
 		!byte $67,$f8,$00,$b8,$81,$bf,$80,$b8,$b4,$b2,$00
 
-boss_behavior
-		rts
 d0tables_end

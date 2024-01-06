@@ -22,10 +22,26 @@ else
 	read
 fi
 
+acme outdoortext.asm
+if [ $? -eq 0 ]; then
+	echo 'outdoortext.asm successfully compiled!'
+else
+	echo 'Error!'
+	read
+fi
+
 acme d0tables.asm
 if [ $? -eq 0 ]; then
 	gvim d0tables_labels.a
 	echo 'd0tables.asm successfully compiled!'
+else
+	echo 'Error!'
+	read
+fi
+
+acme d0text.asm
+if [ $? -eq 0 ]; then
+	echo 'd0text.asm successfully compiled!'
 else
 	echo 'Error!'
 	read
