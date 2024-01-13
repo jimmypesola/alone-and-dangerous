@@ -1,8 +1,6 @@
-acme -l aad_symbols.txt aad.asm
-if %ERRORLEVEL% == 0 (
-	start c:\windows\notepad.exe aad_symbols.txt
-	x64 aad.prg
+if exist aad.d64 (
+x64 aad.d64
 ) else (
-	echo Error!
-	pause
+call pack_aad.bat
+x64 aad.d64
 )

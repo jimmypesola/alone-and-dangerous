@@ -23,7 +23,7 @@ div#data {
   padding: 10px 10px 10px 10px;
   margin: 0px 0px 0px 0px;
   width: 400px;
-  height: 480px;
+  height: 576px;
   opacity: 1.0;
   background-color: rgba(64, 0, 0, 255);
   display: inline;
@@ -40,7 +40,7 @@ div#return_data {
   padding: 10px 10px 10px 10px;
   margin: 0px 0px 0px 0px;
   width: 400px;
-  height: 480px;
+  height: 576px;
   opacity: 1.0;
   background-color: rgba(0, 0, 64, 255);
   display: inline;
@@ -57,7 +57,7 @@ div#extension_data {
   padding: 10px 10px 10px 10px;
   margin: 0px 0px 0px 0px;
   width: 400px;
-  height: 480px;
+  height: 576px;
   opacity: 1.0;
   background-color: rgba(64, 64, 0, 255);
   display: inline;
@@ -74,7 +74,7 @@ div#session {
   padding: 10px 10px 10px 10px;
   margin: 0px 0px 0px 0px;
   width: 400px;
-  height: 480px;
+  height: 576px;
   opacity: 1.0;
   background-color: rgba(0, 64, 0, 255);
   display: inline;
