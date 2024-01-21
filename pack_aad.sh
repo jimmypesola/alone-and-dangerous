@@ -77,28 +77,11 @@ CRUNCHED_LEN_INCFILE=file_lengths.a
 truncate -s 0 $CRUNCHED_LEN_INCFILE
 
 echo =======================================================================
-echo ========================== Core Tables ================================
-echo =======================================================================
-
-# -- This command will crunch the core tables machine code file and use the specified load address $0400, decrunched file will be relocated to $f000
-exomizer mem -l 0x0400 $CORE_TABLES_PRG -o $CORE_TABLES_FILE
-RESULT=$?
-if [ $RESULT -eq 0 ]; then
-	SIZE=$(ls -l $CORE_TABLES_FILE | cut -d' ' -f 5)
-	echo "ct_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
-	echo 'Packing core tables file was successful!'
-else
-	echo 'Error!'
-	read
-	exit $RESULT
-fi
-
-echo =======================================================================
 echo ======================== Outdoor Tables ===============================
 echo =======================================================================
 
 # -- This command will crunch the main outdoor tables binary file and use the specified load address $0400, decrunched file will be relocated to $e000
-exomizer mem -l 0x0400 $OUTDOOR_TABLES_PRG -o $OUTDOOR_TABLES_FILE
+exomizer mem -l 0xa000 $OUTDOOR_TABLES_PRG -o $OUTDOOR_TABLES_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
 	SIZE=$(ls -l $OUTDOOR_TABLES_FILE | cut -d' ' -f 5)
