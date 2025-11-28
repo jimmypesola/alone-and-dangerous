@@ -3,6 +3,7 @@
 echo '### RLE compress all maps'
 python3 rle_encode.py aad_map_big.bin aad_map_big.rle
 python3 rle_encode.py aad_d0_map.bin aad_d0_map.rle
+python3 rle_encode.py aad_d1_map.bin aad_d1_map.rle
 
 acme coretables.asm
 if [ $? -eq 0 ]; then
@@ -42,6 +43,23 @@ fi
 acme d0text.asm
 if [ $? -eq 0 ]; then
 	echo 'd0text.asm successfully compiled!'
+else
+	echo 'Error!'
+	read
+fi
+
+acme d1tables.asm
+if [ $? -eq 0 ]; then
+	gvim d1tables_labels.a
+	echo 'd1tables.asm successfully compiled!'
+else
+	echo 'Error!'
+	read
+fi
+
+acme d1text.asm
+if [ $? -eq 0 ]; then
+	echo 'd1text.asm successfully compiled!'
 else
 	echo 'Error!'
 	read

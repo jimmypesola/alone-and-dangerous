@@ -28,6 +28,15 @@ DUNGEON_0_SPRITES_BIN=aad_sprites_dungeon0.bin
 DUNGEON_0_TABLES_PRG=d0tables.prg
 DUNGEON_0_TEXT_PRG=d0text.prg
 
+DUNGEON_1_CHARSET_BIN=aad_d1_charset.bin
+DUNGEON_1_CHARSET_ATTRS_BIN=aad_d1_charset_attrs.bin
+DUNGEON_1_TILES_BIN=aad_d1_tiles.bin
+DUNGEON_1_RLE=aad_d1_map.rle
+DUNGEON_1_SPRITES_BIN=aad_sprites_dungeon1.bin
+DUNGEON_1_TABLES_PRG=d1tables.prg
+DUNGEON_1_TEXT_PRG=d1text.prg
+
+
 BASEADDR=2049                    # $0801
 PARTONE_START=2049               # $0801
 PARTTWO_START=12288              # $3000
@@ -57,18 +66,34 @@ DUNGEON_0_TABLES_FILE=d0t
 DUNGEON_0_TEXT_FILE=d0x
 DUNGEON_1_FILE=d1
 DUNGEON_1_SPRITES_FILE=d1s
+DUNGEON_1_CHARSET_FILE=d1c
+DUNGEON_1_TABLES_FILE=d1t
+DUNGEON_1_TEXT_FILE=d1x
 DUNGEON_2_FILE=d2
 DUNGEON_2_SPRITES_FILE=d2s
+DUNGEON_2_CHARSET_FILE=d2c
+DUNGEON_2_TABLES_FILE=d2t
+DUNGEON_2_TEXT_FILE=d2x
 DUNGEON_3_FILE=d3
 DUNGEON_3_SPRITES_FILE=d3s
+DUNGEON_3_CHARSET_FILE=d3c
+DUNGEON_3_TABLES_FILE=d3t
+DUNGEON_3_TEXT_FILE=d3x
 DUNGEON_4_FILE=d4
 DUNGEON_4_SPRITES_FILE=d4s
+DUNGEON_4_CHARSET_FILE=d4c
+DUNGEON_4_TABLES_FILE=d4t
+DUNGEON_4_TEXT_FILE=d4x
 DUNGEON_5_FILE=d5
 DUNGEON_5_SPRITES_FILE=d5s
+DUNGEON_5_CHARSET_FILE=d5c
+DUNGEON_5_TABLES_FILE=d5t
+DUNGEON_5_TEXT_FILE=d5x
 DUNGEON_6_FILE=d6
 DUNGEON_6_SPRITES_FILE=d6s
-DUNGEON_7_FILE=d7
-DUNGEON_7_SPRITES_FILE=d7s
+DUNGEON_6_CHARSET_FILE=d6c
+DUNGEON_6_TABLES_FILE=d6t
+DUNGEON_6_TEXT_FILE=d6x
 
 # This is the packer command which will pack all files into one single compressed binary + initial loader routine.
 # TODO: Later, remove the map + charset attrs + tiles + sprites, replace with intro screen + code
@@ -233,6 +258,80 @@ else
 	read
 	exit $RESULT
 fi
+
+
+# --------------------------------------
+# -- DUNGEON 1
+# --------------------------------------
+
+echo =======================================================================
+echo ======================== Dungeon 1 Tables =============================
+echo =======================================================================
+
+# -- This command will crunch dungeon 1 tables binary file and use the specified load address $0400, decrunched file will be relocated to $e000
+exomizer mem -l 0x0400 $DUNGEON_1_TABLES_PRG -o $DUNGEON_1_TABLES_FILE
+RESULT=$?
+if [ $RESULT -eq 0 ]; then
+	SIZE=$(ls -l $DUNGEON_1_TABLES_FILE | cut -d' ' -f 5)
+	echo "d1_tables_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing dungeon 1 tables file was successful!'
+else
+	echo 'Error!'
+	read
+	exit $RESULT
+fi
+
+echo =======================================================================
+echo ======================== Dungeon 1 RLE Map ============================
+echo =======================================================================
+
+# -- This command will crunch dungeon 1 binary map (RLE packed) file and use the specified load address $6ffa, decrunched files will be relocated to $7000
+exomizer mem -l 0x6ffa $DUNGEON_1_RLE@0x7000 $DUNGEON_1_TEXT_PRG $DUNGEON_1_CHARSET_ATTRS_BIN@$MAPCOLSLOC $DUNGEON_1_TILES_BIN@$MAPTILESLOC -o $DUNGEON_1_FILE
+RESULT=$?
+if [ $RESULT -eq 0 ]; then
+	SIZE=$(ls -l $DUNGEON_1_FILE | cut -d' ' -f 5)
+	echo "d1_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing dungeon 1 map file was successful!'
+else
+	echo 'Error!'
+	read
+	exit $RESULT
+fi
+
+echo =======================================================================
+echo ======================== Dungeon 1 Sprites ============================
+echo =======================================================================
+
+# -- This command will crunch dungeon 1 sprites binary file and use the specified load address $4ffe (using a small safety offset), decrunched file will be relocated to $5000
+exomizer mem -l 0x4ffe $DUNGEON_1_SPRITES_BIN@0x5000 -o $DUNGEON_1_SPRITES_FILE
+RESULT=$?
+if [ $RESULT -eq 0 ]; then
+	SIZE=$(ls -l $DUNGEON_1_SPRITES_FILE | cut -d' ' -f 5)
+	echo "d1_sprites_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing dungeon 1 sprites file was successful!'
+else
+	echo 'Error!'
+	read
+	exit $RESULT
+fi
+
+echo =======================================================================
+echo ======================== Dungeon 1 Charset ============================
+echo =======================================================================
+
+# -- This command will crunch dungeon 1 charset binary file and use the specified load address $47fe, decrunched file will be relocated to $4800
+exomizer mem -l 0x47fe $DUNGEON_1_CHARSET_BIN@0x4800 -o $DUNGEON_1_CHARSET_FILE
+RESULT=$?
+if [ $RESULT -eq 0 ]; then
+	SIZE=$(ls -l $DUNGEON_1_CHARSET_FILE | cut -d' ' -f 5)
+	echo "d1_charset_len=$SIZE" >> $CRUNCHED_LEN_INCFILE
+	echo 'Packing dungeon 1 charset file was successful!'
+else
+	echo 'Error!'
+	read
+	exit $RESULT
+fi
+
 
 
 

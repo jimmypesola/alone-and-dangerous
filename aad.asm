@@ -71,7 +71,7 @@
 ;
 
 ; -----------------------------------------------------------
-;  Welcome to the constant section
+;  Import constants
 ; -----------------------------------------------------------
 !source "const.asm"
 ;------------------------------------------------------------------------------------
@@ -183,6 +183,54 @@ d0_sprites_lb_end	= <($4ffe + d0_sprites_len - 2)
 d0_sprites_hb_end	= >($4ffe + d0_sprites_len - 2)
 d0_charset_lb_end	= <($47fe + d0_charset_len - 2)
 d0_charset_hb_end	= >($47fe + d0_charset_len - 2)
+d1_tables_lb_end	= <($0400 + d1_tables_len - 2)
+d1_tables_hb_end	= >($0400 + d1_tables_len - 2)
+d1_lb_end		= <($6ffa + d1_len - 2)
+d1_hb_end		= >($6ffa + d1_len - 2)
+d1_sprites_lb_end	= <($4ffe + d1_sprites_len - 2)
+d1_sprites_hb_end	= >($4ffe + d1_sprites_len - 2)
+d1_charset_lb_end	= <($47fe + d1_charset_len - 2)
+d1_charset_hb_end	= >($47fe + d1_charset_len - 2)
+d2_tables_lb_end	= <($0400 + d2_tables_len - 2)
+d2_tables_hb_end	= >($0400 + d2_tables_len - 2)
+d2_lb_end		= <($6ffa + d2_len - 2)
+d2_hb_end		= >($6ffa + d2_len - 2)
+d2_sprites_lb_end	= <($4ffe + d2_sprites_len - 2)
+d2_sprites_hb_end	= >($4ffe + d2_sprites_len - 2)
+d2_charset_lb_end	= <($47fe + d2_charset_len - 2)
+d2_charset_hb_end	= >($47fe + d2_charset_len - 2)
+d3_tables_lb_end	= <($0400 + d3_tables_len - 2)
+d3_tables_hb_end	= >($0400 + d3_tables_len - 2)
+d3_lb_end		= <($6ffa + d3_len - 2)
+d3_hb_end		= >($6ffa + d3_len - 2)
+d3_sprites_lb_end	= <($4ffe + d3_sprites_len - 2)
+d3_sprites_hb_end	= >($4ffe + d3_sprites_len - 2)
+d3_charset_lb_end	= <($47fe + d3_charset_len - 2)
+d3_charset_hb_end	= >($47fe + d3_charset_len - 2)
+d4_tables_lb_end	= <($0400 + d4_tables_len - 2)
+d4_tables_hb_end	= >($0400 + d4_tables_len - 2)
+d4_lb_end		= <($6ffa + d4_len - 2)
+d4_hb_end		= >($6ffa + d4_len - 2)
+d4_sprites_lb_end	= <($4ffe + d4_sprites_len - 2)
+d4_sprites_hb_end	= >($4ffe + d4_sprites_len - 2)
+d4_charset_lb_end	= <($47fe + d4_charset_len - 2)
+d4_charset_hb_end	= >($47fe + d4_charset_len - 2)
+d5_tables_lb_end	= <($0400 + d5_tables_len - 2)
+d5_tables_hb_end	= >($0400 + d5_tables_len - 2)
+d5_lb_end		= <($6ffa + d5_len - 2)
+d5_hb_end		= >($6ffa + d5_len - 2)
+d5_sprites_lb_end	= <($4ffe + d5_sprites_len - 2)
+d5_sprites_hb_end	= >($4ffe + d5_sprites_len - 2)
+d5_charset_lb_end	= <($47fe + d5_charset_len - 2)
+d5_charset_hb_end	= >($47fe + d5_charset_len - 2)
+d6_tables_lb_end	= <($0400 + d6_tables_len - 2)
+d6_tables_hb_end	= >($0400 + d6_tables_len - 2)
+d6_lb_end		= <($6ffa + d6_len - 2)
+d6_hb_end		= >($6ffa + d6_len - 2)
+d6_sprites_lb_end	= <($4ffe + d6_sprites_len - 2)
+d6_sprites_hb_end	= >($4ffe + d6_sprites_len - 2)
+d6_charset_lb_end	= <($47fe + d6_charset_len - 2)
+d6_charset_hb_end	= >($47fe + d6_charset_len - 2)
 
 
 tables_name_lb_idx	!byte <outdoortables, <dungeon_0_tables, <dungeon_1_tables
@@ -202,67 +250,73 @@ tables_name_len_idx	!byte outdoortables_len-outdoortables, dungeon_0_tables_len-
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-tables_file_end_lb	!byte od_tables_lb_end, d0_tables_lb_end, $e1, $e1, $e1, $e1, $e1, $e1, $e1
-tables_file_end_hb	!byte od_tables_hb_end, d0_tables_hb_end, $4c, $4c, $4c, $4c, $4c, $4c, $4c
+tables_file_end_lb	!byte od_tables_lb_end, d0_tables_lb_end, d1_tables_lb_end, d2_tables_lb_end, d2_tables_lb_end
+			!byte d3_tables_lb_end, d4_tables_lb_end, d5_tables_lb_end, d6_tables_lb_end
+tables_file_end_hb	!byte od_tables_hb_end, d0_tables_hb_end, d1_tables_hb_end, d2_tables_hb_end, d2_tables_hb_end
+			!byte d3_tables_hb_end, d4_tables_hb_end, d5_tables_hb_end, d6_tables_hb_end
 
-map_name_lb_idx		!byte <outdoorworld,<dungeon_0,<dungeon_1,<dungeon_2,<dungeon_3
-			!byte <dungeon_4,<dungeon_5,<dungeon_6,<dungeon_7
+map_name_lb_idx		!byte <outdoorworld,<dungeon_0,<dungeon_1,<dungeon_2,<dungeon_2
+			!byte <dungeon_3,<dungeon_4,<dungeon_5,<dungeon_6
 
-map_name_hb_idx		!byte >outdoorworld,>dungeon_0,>dungeon_1,>dungeon_2,>dungeon_3
-			!byte >dungeon_4,>dungeon_5,>dungeon_6,>dungeon_7
+map_name_hb_idx		!byte >outdoorworld,>dungeon_0,>dungeon_1,>dungeon_2,>dungeon_2
+			!byte >dungeon_3,>dungeon_4,>dungeon_5,>dungeon_6
 
 map_name_len_idx	!byte outdoorworld_len-outdoorworld
 			!byte dungeon_0_len-dungeon_0, dungeon_1_len-dungeon_1
-			!byte dungeon_2_len-dungeon_2, dungeon_3_len-dungeon_3
-			!byte dungeon_4_len-dungeon_4, dungeon_5_len-dungeon_5
-			!byte dungeon_6_len-dungeon_6, dungeon_7_len-dungeon_7
+			!byte dungeon_2_len-dungeon_2, dungeon_2_len-dungeon_2
+			!byte dungeon_3_len-dungeon_3, dungeon_4_len-dungeon_4
+			!byte dungeon_5_len-dungeon_5, dungeon_6_len-dungeon_6
 
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-map_file_end_lb		!byte od_lb_end, d0_lb_end, $ec, $ec, $ec, $ec, $ec, $ec, $ec
-map_file_end_hb		!byte od_hb_end, d0_hb_end, $6c, $6c, $6c, $6c, $6c, $6c, $6c
+map_file_end_lb		!byte od_lb_end, d0_lb_end, d1_lb_end, d2_lb_end, d2_lb_end, d3_lb_end, d4_lb_end, d5_lb_end, d6_lb_end
+map_file_end_hb		!byte od_hb_end, d0_hb_end, d1_hb_end, d2_hb_end, d2_hb_end, d3_hb_end, d4_hb_end, d5_hb_end, d6_hb_end
 
 sprite_name_lb_idx	!byte <outdoorsprites, <dungeon_0_sprites, <dungeon_1_sprites
-			!byte <dungeon_2_sprites, <dungeon_3_sprites, <dungeon_4_sprites
-			!byte <dungeon_5_sprites, <dungeon_6_sprites, <dungeon_7_sprites
+			!byte <dungeon_2_sprites, <dungeon_2_sprites, <dungeon_3_sprites
+			!byte <dungeon_4_sprites, <dungeon_5_sprites, <dungeon_6_sprites
 
 sprite_name_hb_idx	!byte >outdoorsprites, >dungeon_0_sprites, >dungeon_1_sprites
-			!byte >dungeon_2_sprites, >dungeon_3_sprites, >dungeon_4_sprites
-			!byte >dungeon_5_sprites, >dungeon_6_sprites, >dungeon_7_sprites
+			!byte >dungeon_2_sprites, >dungeon_2_sprites, >dungeon_3_sprites
+			!byte >dungeon_4_sprites, >dungeon_5_sprites, >dungeon_6_sprites
 
 sprite_name_len_idx	!byte outdoorsprites_len-outdoorsprites, dungeon_0_sprites_len-dungeon_0_sprites
 			!byte dungeon_1_sprites_len-dungeon_1_sprites, dungeon_2_sprites_len-dungeon_2_sprites
-			!byte dungeon_3_sprites_len-dungeon_3_sprites, dungeon_4_sprites_len-dungeon_4_sprites
-			!byte dungeon_5_sprites_len-dungeon_5_sprites, dungeon_6_sprites_len-dungeon_6_sprites
-			!byte dungeon_7_sprites_len-dungeon_7_sprites
+			!byte dungeon_2_sprites_len-dungeon_2_sprites, dungeon_3_sprites_len-dungeon_3_sprites
+			!byte dungeon_4_sprites_len-dungeon_4_sprites, dungeon_5_sprites_len-dungeon_5_sprites
+			!byte dungeon_6_sprites_len-dungeon_6_sprites
 
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-sprite_file_end_lb	!byte od_sprites_lb_end, d0_sprites_lb_end, $85, $85, $85, $85, $85, $85, $85
-sprite_file_end_hb	!byte od_sprites_hb_end, d0_sprites_hb_end, $59, $59, $59, $59, $59, $59, $59
+sprite_file_end_lb	!byte od_sprites_lb_end, d0_sprites_lb_end, d1_sprites_lb_end, d2_sprites_lb_end, d2_sprites_lb_end
+			!byte d3_sprites_lb_end, d4_sprites_lb_end, d5_sprites_lb_end, d6_sprites_lb_end
+sprite_file_end_hb	!byte od_sprites_hb_end, d0_sprites_hb_end, d1_sprites_hb_end, d2_sprites_hb_end, d2_sprites_hb_end
+			!byte d3_sprites_hb_end, d4_sprites_hb_end, d5_sprites_hb_end, d6_sprites_hb_end
 
 
 charset_name_lb_idx	!byte <outdoorcharset, <dungeon_0_charset, <dungeon_1_charset
-			!byte <dungeon_2_charset, <dungeon_3_charset, <dungeon_4_charset
-			!byte <dungeon_5_charset, <dungeon_6_charset, <dungeon_7_charset
+			!byte <dungeon_2_charset, <dungeon_2_charset, <dungeon_3_charset
+			!byte <dungeon_4_charset, <dungeon_5_charset, <dungeon_6_charset
 
 charset_name_hb_idx	!byte >outdoorcharset, >dungeon_0_charset, >dungeon_1_charset
-			!byte >dungeon_2_charset, >dungeon_3_charset, >dungeon_4_charset
-			!byte >dungeon_5_charset, >dungeon_6_charset, >dungeon_7_charset
+			!byte >dungeon_2_charset, >dungeon_2_charset, >dungeon_3_charset
+			!byte >dungeon_4_charset, >dungeon_5_charset, >dungeon_6_charset
 
 charset_name_len_idx	!byte outdoorcharset_len-outdoorcharset, dungeon_0_charset_len-dungeon_0_charset
 			!byte dungeon_1_charset_len-dungeon_1_charset, dungeon_2_charset_len-dungeon_2_charset
-			!byte dungeon_3_charset_len-dungeon_3_charset, dungeon_4_charset_len-dungeon_4_charset
-			!byte dungeon_5_charset_len-dungeon_5_charset, dungeon_6_charset_len-dungeon_6_charset
-			!byte dungeon_7_charset_len-dungeon_7_charset
+			!byte dungeon_2_charset_len-dungeon_2_charset, dungeon_3_charset_len-dungeon_3_charset
+			!byte dungeon_4_charset_len-dungeon_4_charset, dungeon_5_charset_len-dungeon_5_charset
+			!byte dungeon_6_charset_len-dungeon_6_charset
 
 ; EXOMIZER PACKER END ADDRESSES, FIND THEM IN PACKER OUTPUT LIKE:
 ; "Phase 3: Generating output file" section, at "Writing "..." as prg, saving from $A000 to $A32C"
 ; IN THIS EXAMPLE: tables_file_end_lb = $2c, tables_file_end_hb = $a3
-charset_file_end_lb	!byte od_charset_lb_end, d0_charset_lb_end, $e1, $e1, $e1, $e1, $e1, $e1, $e1
-charset_file_end_hb	!byte od_charset_hb_end, d0_charset_hb_end, $4c, $4c, $4c, $4c, $4c, $4c, $4c
+charset_file_end_lb	!byte od_charset_lb_end, d0_charset_lb_end, d1_charset_lb_end, d2_charset_lb_end, d2_charset_lb_end
+			!byte d3_charset_lb_end, d4_charset_lb_end, d5_charset_lb_end, d6_charset_lb_end
+charset_file_end_hb	!byte od_charset_hb_end, d0_charset_hb_end, d1_charset_hb_end, d2_charset_hb_end, d2_charset_hb_end
+			!byte d3_charset_hb_end, d4_charset_hb_end, d5_charset_hb_end, d6_charset_hb_end
 
 dungeon_name		!scr "  dungeon @  "
 rat_dungeon_name	!scr "   sewers    "
@@ -272,6 +326,8 @@ dungeon_names_lo	!byte <overworld_name, <rat_dungeon_name, <dungeon_name, <dunge
 			!byte <dungeon_name, <dungeon_name, <dungeon_name
 dungeon_names_hi	!byte >overworld_name, >rat_dungeon_name, >dungeon_name, >dungeon_name, >dungeon_name, >dungeon_name
 			!byte >dungeon_name, >dungeon_name, >dungeon_name
+
+dungeon_ids		!byte 0, 0, 1, 1, 2, 3, 4, 5, 6
 
 ;-----------------------------------------------------------
 ; raster routine - scroll rendering
@@ -2383,7 +2439,8 @@ load_txt		lda $0000,y
 dest_txt		lda $0000,y
 			cmp #0
 			bne +
-			lda MapID
+			ldx MapID
+			lda dungeon_ids,x
 			clc
 			adc #num_start
 +			sta $4216,y
@@ -3120,7 +3177,20 @@ ds_exit_target_loop
 		rts
 
 ;-----------------------------------------------------------
-; -------------------------------------------------
+; spawn_loot
+; Spawns some loot on opening a chest
+;
+; reads:
+; - tmp_chest_loc : Screen position of the chest
+; - CurrentRoomIdx : Current room index
+; mutates:
+; - a, x, y
+; - sw_target_room
+; - sw_target_pos
+; - sw_target_tile
+; - sw_tmp_x
+; - sw_tmp_y
+;-----------------------------------------------------------
 spawn_loot
 		ldx MobsPresent
 		inc MobsPresent	; Allocate next free enemy slot for loot sprite.
@@ -3157,6 +3227,21 @@ spawn_loot
 check_chests
 		ldy CurrentRoomIdx
 		lda extensions,y
+		and #$50
+		cmp #$50	; Chest also triggers switch?
+		bne +
+			lda extensions,x
+			and #$0f
+			tax
+			lda switch_sets,x
+			tax
+			jsr next_switch		; Move on to trigger the switch (same index as chest, in range $00-$0f)
+
+			; Restore lost registers x and y
+			ldx MobsPresent
+			dex
+			ldy CurrentRoomIdx
++		lda extensions,y
 		and #$1f		; filter out chest idx
 		tay
 		lda chests,y
@@ -4761,12 +4846,61 @@ change_switch_state
 		lda switch_sets,x
 		tax	; move switch_lists index to x
 
-		; loop to process all switches in this room
+		; process all switches in this room
+		jsr next_switch
+
+		ldx sw_src_pos
+		ldy sw_src_tile
+		cpy #TileSwitchInactive
+		bne +
+			ldy #TileSwitchActive
+			jmp ++
+
++		cpy #TileSwitchActive
+		bne +
+			ldy #TileSwitchInactive
+
+++		tya
+		sta tilebuffer,x	; update tile buffer
+
+		lda screen_id
+		eor #1
+		sta screen_id
+
+		jsr put_tile
+
+		lda screen_id
+		eor #1
+		sta screen_id
+
+		; Clear pending interrupts just in case (causes frame skips)
+		asl $d019
+		lda $dc0d
+		lda $dd0d
+		dec $d021
+		cli
+
++		rts
+
+;-----------------------------------------------------------
+
+;-----------------------------------------------------------
+; next_switch
+;
+; Process the next switch in switch_lists and activate
+;  its targets, persistent or non-persistent
+;
+; parameters:
+; (in) x : switch index
+;
+; returns:
+;  void
+;-----------------------------------------------------------
 
 next_switch		lda switch_lists,x	; get switch list x
 			cmp #$ff
 			bne +
-				jmp exit_switch_loop	; exit loop, no more switches
+				rts		; exit loop, no more switches
 
 +			stx sw_tmp_x		; save switch index (x=$05)
 
@@ -4774,6 +4908,8 @@ next_switch		lda switch_lists,x	; get switch list x
 			sty sw_tmp_y		; save switch y (y=$18)
 
 			lda swbase+1,y		; get position
+			cmp #0			; when position is 0, the switch is triggered by looting a chest.
+			beq +
 			cmp plr_r_last_tilepos	; check with last collided tile (should be a switch)
 			beq +
 				inx		; if this position was not correct, check next switch
@@ -4785,7 +4921,7 @@ next_switch		lda switch_lists,x	; get switch list x
 			sta sw_state_swa	; save the state
 
 			lda swbase+2,y		; get condition value (indicate another switch on
-						; which this switch depends), or $fe that makes it a toggle switch
+						;  which this switch depends), or $fe that makes it a toggle switch
 			sta sw_cond
 
 			; loop all switch targets
@@ -4809,17 +4945,17 @@ next_sw_target
 					lda sw_cond
 					and #$7f
 					tay			; switch B index
-					lda sw_state_swa	; switch A index
-					eor swbase,y
-					sta sw_state	; save XORed state
+					lda sw_state_swa	; switch A state
+					eor swbase,y		; switch B state
+					sta sw_state	; save XORed state: A ^ B
 
 					jmp check_if_local_update
 +				; else
 					; Normal AND condition
 					ldy sw_cond		; switch B index
-					lda sw_state_swa	; switch A index
-					and swbase,y
-					sta sw_state	; save ANDed state
+					lda sw_state_swa	; switch A state
+					and swbase,y		; switch B state
+					sta sw_state	; save ANDed state: A & B
 
 					jmp check_if_local_update
 				; endif
@@ -4902,44 +5038,8 @@ check_target_pc_pos			ldx sw_target_pos		; Get switch target pos index
 exit_target_loop
 			ldx sw_tmp_x
 			inx
-			jmp next_switch	; go and process next switch
-
-exit_switch_loop
-		ldx sw_src_pos
-		ldy sw_src_tile
-		cpy #TileSwitchInactive
-		bne +
-			ldy #TileSwitchActive
-			jmp ++
-
-+		cpy #TileSwitchActive
-		bne +
-			ldy #TileSwitchInactive
-
-++		tya
-		sta tilebuffer,x	; update tile buffer
-
-		lda screen_id
-		eor #1
-		sta screen_id
-
-		jsr put_tile
-
-		lda screen_id
-		eor #1
-		sta screen_id
-
-		; Clear pending interrupts just in case (causes frame skips)
-		asl $d019
-		lda $dc0d
-		lda $dd0d
-		dec $d021
-		cli
-
-+		rts
-
+			jmp next_switch	; process next switch targets
 ;-----------------------------------------------------------
-
 
 
 ;-----------------------------------------------------------
@@ -7702,7 +7802,7 @@ setup_enemies
 		bne -
 
 
-		; LOAD MOBS ; TODO: Can be simplified. Get rid of mobs_entries_list
+		; LOAD MOBS
 		; prepare source address
 		lda #<world
 		sta tmp_addr
@@ -8963,7 +9063,7 @@ boss_loc_array	;    Room,Tile		  Map
 
 
 ; --------------------------------------------
-;  Persistent changes (introduced by switches)
+;  Persistent changes (introduced by switches or chests)
 ;  labels start with "pc_" and allow up to 7
 ;  tiles per map to change persistently (between loads.) 
 ;  This index refers to offsets in the target

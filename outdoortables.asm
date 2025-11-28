@@ -231,11 +231,16 @@ doorexitsmulti
 
 ; extensions
 ;		$00-$1f = locked doors (if tile #1 then must magically be revealed) (position) (if tile #2 then reference to loot_trigger table instead)
-;		$20-$3f = caption text pointers
-;		$40-$5f = chests (position, content)
+;		$20-$3f = caption text pointers, may be used together with chest or other extension in same room, 
+;		          in such case the extension will point to same index in caption text table as in the chest/other extension index.
+;		$40-$4f = chests (position, content). If no chest, it will spawn an item in the room.
+;		$50-$5f = chests (position, content) + trigger switch on same index/low byte. Used to exchange tiles (lock doors etc.), see switches.
+;		$60-$6f = chests (position, content) + caption text pointer.
+;		$70-$7f = chests (position, content) + caption text pointer + trigger switch.
 ;		$80-$9f = destroyable blocks (not stones! they are all breakable.) (position, content)
-;		$c0-$ef = runestones (spells) (spell number) or triggers when looting an item
+;		$c0-$cf = runestones (spells) (spell number) or triggers when looting an item
 ;		$f0-$fe = switches (refers to two-state switchlist table 'switch_lists', max 14 entries) (position ref list ending with $ff)
+;		$ff     = nothing
 
 ; notes:        - If $00-$3f but no door nor grass, then reveal a life container instead.
 extensions
@@ -249,10 +254,10 @@ extensions
 		!byte $ff,$ff,$9b,$9c,$ff,$ff,$ff,$9d,$ff,$9e,$ff,$ff,$9f,$a0,$ff,$a1	; $60
 		!byte $ff,$ff,$a2,$ff,$08,$ff,$a3,$ff,$a4,$ff,$ff,$ff,$ff,$ff,$ff,$09	; $70
 		; -------------------------------------------------------------------
-		!byte $42,$43,$ff,$44,$45,$ff,$ff,$44,$45,$45,$45,$45,$46,$ff,$47,$c5	; $80
-		!byte $48,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $90
+		!byte $42,$43,$ff,$44,$45,$ff,$ff,$46,$ff,$ff,$ff,$ff,$47,$ff,$ff,$48	; $80
+		!byte $ff,$ff,$ff,$ff,$49,$4a,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $90
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff	; $a0
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$21,$ff,$ff,$ff,$ff,$ff,$60,$ff,$ff,$ff	; $b0
+		!byte $ff,$ff,$ff,$ff,$ff,$ff,$21,$ff,$ff,$ff,$ff,$ff,$70,$ff,$ff,$ff	; $b0
 		!byte $ff,$ff,$ff							; $c0
 
 ; pairs of (screen tile position, item) for:
@@ -284,29 +289,30 @@ runestones		; $c0 - $ef
 		!byte $ff,$ff
 
 switch_sets	; indices $f0 - $fe, values are offsets in switch_lists
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte $00,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
 ; switches
 switch_lists	; padding bytes (32 bytes in total for switch_lists)
-		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+		!byte switch_0-swbase,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 		!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 
 ; switch	(state, position, AND condition, targets)
-;               -  tile will be incremented by 1 when switched on and decremented by 1 when switched off
+;               -  tile will be set to tile_on when switched on and to tile_off when switched off.
 ;		-  position is tile position of switch on screen
 ;               -  targets is a list of switch target tiles affected by this switch, for example:
 ;		   !byte .. , swtarget0-swtargetbase, swtarget1-swtargetbase, $ff,$ff,$ff
 ;		      - will contain two target tiles and ends list with $ff
-;		-  AND condition indicates a dependency on an extra switch to activate, for example:
+;		-  AND condition indicates a dependency on an extra switch to activate.
+;		    If AND condition > $7f, it will be a toggle switch instead.
+;		    If AND condition is set to $ff, then there is no condition.
 ;
-;                  switch_0	!byte $26, $40, swtarget_0-swtargetbase, $ff, switch_1-swbase =>
+;                  Example:
+;                  switch_1	!byte $00, $40, swtarget_0-swtargetbase, $ff, swtarget0-swtargetbase =>
 ;
 ;			        Here "switch_1" needs to be ON for "switch_0" to activate its target.
 ;
-;		   If AND condition is set to $fe, it will be a toggle switch instead
-;		   If AND condition is set to $ff, then there is no condition.
 swbase
-switch_0	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+switch_0	!byte $00, $00, $ff, swtarget0-swtargetbase, $ff, $ff, $ff, $ff
 switch_1	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 switch_2	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 switch_3	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
@@ -317,7 +323,7 @@ switch_7	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 
 ; switch target (room, position, tile_on, tile_off)
 swtargetbase
-swtarget0	!byte $ff, $ff, 0, 0
+swtarget0	!byte $70, $6c, $1c, $0e	; Locks/unlocks door when triggered at start room.
 swtarget1	!byte $ff, $ff, 0, 0
 swtarget2	!byte $ff, $ff, 0, 0
 swtarget3	!byte $ff, $ff, 0, 0
