@@ -175,6 +175,7 @@ od_sprites_lb_end	= <($4ffe + od_sprites_len - 2)
 od_sprites_hb_end	= >($4ffe + od_sprites_len - 2)
 od_charset_lb_end	= <($47fe + od_charset_len - 2)
 od_charset_hb_end	= >($47fe + od_charset_len - 2)
+
 d0_tables_lb_end	= <($0400 + d0_tables_len - 2)
 d0_tables_hb_end	= >($0400 + d0_tables_len - 2)
 d0_lb_end		= <($6ffa + d0_len - 2)

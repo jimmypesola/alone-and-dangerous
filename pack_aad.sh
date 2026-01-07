@@ -81,7 +81,7 @@ echo ======================== Outdoor Tables ===============================
 echo =======================================================================
 
 # -- This command will crunch the main outdoor tables binary file and use the specified load address $0400, decrunched file will be relocated to $e000
-exomizer mem -l 0xa000 $OUTDOOR_TABLES_PRG -o $OUTDOOR_TABLES_FILE
+exomizer mem -l 0x0400 $OUTDOOR_TABLES_PRG -o $OUTDOOR_TABLES_FILE
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
 	SIZE=$(ls -l $OUTDOOR_TABLES_FILE | cut -d' ' -f 5)
